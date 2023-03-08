@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
+import java.util.Objects;
 import java.util.Random;
 
 public class Listener implements Runnable {
@@ -15,7 +16,7 @@ public class Listener implements Runnable {
     public Listener(String address, int port, Node node) throws UnknownHostException {
         this.serverSocket = setServerSocket(address, port);
         this.parentNode = node;
-        System.out.println("Port set successfully to " + serverSocket.getLocalPort());
+        System.out.println("ServerSocket set successfully to " + serverSocket.getLocalSocketAddress());
     }
 
     private ServerSocket setServerSocket(String address, int port) throws UnknownHostException {
@@ -27,11 +28,7 @@ public class Listener implements Runnable {
 
         // Check if port is available
         try {
-            if (address == null) {
-                return new ServerSocket(port);
-            } else {
-                return new ServerSocket(port, 0, InetAddress.getByName(address));
-            }
+            return new ServerSocket(port, 0, InetAddress.getByName(Objects.requireNonNullElse(address, "localhost")));
         } catch (IOException e) {
             // Choose new port and try again
             System.out.println("Port " + port + " not free, finding new port");
@@ -47,7 +44,6 @@ public class Listener implements Runnable {
     @Override
     public void run() {
         try {
-            System.out.println("ServerSocket started at IP address " + ((InetSocketAddress) serverSocket.getLocalSocketAddress()).getAddress().getHostAddress());
             while (true) {
                 // Start thread to handle each new connection
                 ConnectionHandler connectionHandler = new ConnectionHandler(serverSocket.accept(), parentNode);

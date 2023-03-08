@@ -37,24 +37,35 @@ public class ConnectionHandler extends Thread {
             BufferedReader reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 
             // Read all incoming messages from the socket until connection is closed
-            while (true) {
-                String message = reader.readLine();
+            String message;
+            do {
+                message = reader.readLine();
 
                 // Assign message to be handled by the node
                 parentNode.handleMessage(message, this);
-            }
+
+            } while (message != null);
+
+            throw new Exception();
 
         } catch (Exception e) {
             // Connection closed - remove connection
             e.printStackTrace();
             parentNode.activeConnections.remove(this);
-            System.out.println("Connection closed");
+
+            // Close socket
+            try {
+                this.socket.close();
+                System.out.println("Connection closed");
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
     public void sendMessage(String message) {
         try {
-            System.out.println("sending message '" + message);
+            System.out.println("sending message " + message);
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
             writer.println(message);
         } catch (IOException e) {

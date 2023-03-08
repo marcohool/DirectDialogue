@@ -18,7 +18,10 @@ public class Peer extends Nodes.Node {
 
         // Start peer
         Peer peer1 = new Peer();
-        peer1.sendMessage("test1", serverAddress);
+        peer1.sendMessage("login 123 123", serverAddress);
+
+//        Peer peer2 = new Peer();
+//        peer2.sendMessage("test2", serverAddress);
 
     }
 
