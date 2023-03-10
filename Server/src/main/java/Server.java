@@ -1,19 +1,20 @@
 import Connections.ConnectionHandler;
 import Nodes.Node;
 
+import java.net.InetSocketAddress;
 import java.sql.*;
 import java.util.Arrays;
 
 public class Server extends Node {
 
-    public Server(String address, int port)  {
-        super(address, port);
+    public Server(String name, String address, int port)  {
+        super(name, new InetSocketAddress(address, port));
     }
 
     public static void main(String[] args) {
 
         // Start server on specified IP and port
-        Server server = new Server("192.168.68.63", 1926);
+        Server server = new Server("server1", "192.168.68.63", 1926);
 
     }
 

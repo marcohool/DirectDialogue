@@ -1,25 +1,26 @@
 package Connections;
 
 import Nodes.Node;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
-import java.util.Objects;
 import java.util.Random;
 
 public class Listener implements Runnable {
     private final ServerSocket serverSocket;
     private final Node parentNode;
 
-    public Listener(String address, int port, Node node) throws UnknownHostException {
-        this.serverSocket = setServerSocket(address, port);
+    public Listener(InetSocketAddress address, Node node) throws UnknownHostException {
+        this.serverSocket = setServerSocket(address, address.getPort());
         this.parentNode = node;
+        node.setAddress((InetSocketAddress) serverSocket.getLocalSocketAddress());
         System.out.println("ServerSocket set successfully to " + serverSocket.getLocalSocketAddress());
     }
 
-    private ServerSocket setServerSocket(String address, int port) throws UnknownHostException {
+    private ServerSocket setServerSocket(InetSocketAddress address, int port) throws UnknownHostException {
 
         // If port is not specified, randomly generate port number
         if (port == 0) {
@@ -28,7 +29,7 @@ public class Listener implements Runnable {
 
         // Check if port is available
         try {
-            return new ServerSocket(port, 0, InetAddress.getByName(Objects.requireNonNullElse(address, "localhost")));
+            return new ServerSocket(port, 0, address.getAddress());
         } catch (IOException e) {
             // Choose new port and try again
             System.out.println("Port " + port + " not free, finding new port");
