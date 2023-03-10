@@ -1,6 +1,9 @@
 package com.example.peer;
 
 import Connections.ConnectionHandler;
+import Messages.Message;
+import Messages.MessageDescriptor;
+
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
@@ -43,20 +46,20 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public void handleMessage(String message, ConnectionHandler connectionHandler) {
+    public void handleMessage(Message message, ConnectionHandler connectionHandler) {
         System.out.println("MESSAGE RECEIVED : '" + message + "' - FROM " + connectionHandler.getRecipientAddress());
 
-        String[] messageSplit = message.split(" ");
-        String[] address = messageSplit[0].split(":");
+        switch (message.getMessageDescriptor()) {
+            case PING:
+                // Generate string of all active connection IPs
 
-        switch (messageSplit[2]) {
-            case "query":
-                if (searchForEstablishedConnection(messageSplit[3]) != null) {
+                break;
+
+            case QUERY:
+                if (searchForEstablishedConnection(new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort())) != null) {
                     System.out.println("Connection is there");
                 }
-
-            case "hit":
-
+                break;
         }
 
     }
@@ -77,7 +80,7 @@ public class Peer extends Nodes.Node {
         for (Peer peer1 : peers) {
             for (Peer peer2: peers) {
                 if (peer1 != peer2) {
-                    peer1.sendMessage("hello", peer2.getAddress());
+                    peer1.sendMessage(MessageDescriptor.PING, null, 5, peer2.getAddress());
                 }
             }
         }

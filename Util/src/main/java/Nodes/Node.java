@@ -2,6 +2,9 @@ package Nodes;
 
 import Connections.ConnectionHandler;
 import Connections.Listener;
+import Messages.Message;
+import Messages.MessageDescriptor;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -31,13 +34,12 @@ public abstract class Node implements INode {
         try {
             Thread thread = new Thread(new Listener(this.address, this));
             thread.start();
-            //onlinePorts.add(port);
         } catch (IOException e) {
             System.err.println("Error listening for incoming connections: " + e.getMessage());
         }
     }
 
-    public void sendMessage(String message, InetSocketAddress address) {
+    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, InetSocketAddress address) {
         try {
             // Check if there is an existing connection with recipient
             ConnectionHandler connection = searchForEstablishedConnection(address);
@@ -50,14 +52,10 @@ public abstract class Node implements INode {
                 connection.start();
             }
 
-            // Prepend ServerSocket address to beginning of message
-            message = this.address.getAddress().getHostAddress() + ":" + this.address.getPort() + " " + message;
-
-            // Prepend username to beginning of message
-            message = this.name + " " + message;
+            Message message = new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent);
 
             // Send message across the connection
-            connection.sendMessage(message);
+            connection.sendMessage(message.toString());
 
         } catch (IOException e) {
             System.out.println("-- Connection refused to " + address + " --");

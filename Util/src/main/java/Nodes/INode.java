@@ -1,9 +1,10 @@
 package Nodes;
 
 import Connections.ConnectionHandler;
+import Messages.Message;
 
 public interface INode {
 
-    void handleMessage(String message, ConnectionHandler connectionHandler);
+    void handleMessage(Message message, ConnectionHandler connectionHandler);
 
 }

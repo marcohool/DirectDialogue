@@ -1,4 +1,5 @@
 import Connections.ConnectionHandler;
+import Messages.Message;
 import Nodes.Node;
 
 import java.net.InetSocketAddress;
@@ -18,38 +19,38 @@ public class Server extends Node {
 
     }
 
-    public void handleMessage(String message, ConnectionHandler connectionHandler) {
+    public void handleMessage(Message message, ConnectionHandler connectionHandler) {
         System.out.println(message + " received from " + connectionHandler.getRecipientAddress());
 
-        String[] split = message.split("\\s+");
-
-        switch (split[0]){
-            // login [username] [password]
-            case "login":
-                if (split.length < 3) {
-                    connectionHandler.sendMessage("error Please enter a valid username & password");
-                } else {
-                    String response = Database.loginUser(split[1], split[2]);
-                    connectionHandler.sendMessage(response);
-                }
-                break;
-            // signup [username] [password]
-            case "signup":
-                if (split.length < 3) {
-                    connectionHandler.sendMessage("error Please enter a valid username & password");
-                } else {
-                    String response = Database.registerUser(split[1], split[2]);
-                    connectionHandler.sendMessage(response);
-                }
-                break;
-            // search [username query]
-            case "search":
-                if (split.length > 1) {
-                    String response = Database.searchUser(String.join(" ", Arrays.copyOfRange(split, 1, split.length)));
-                    connectionHandler.sendMessage(response);
-                }
-                break;
-        }
+//        String[] split = message.split("\\s+");
+//
+//        switch (split[0]){
+//            // login [username] [password]
+//            case "login":
+//                if (split.length < 3) {
+//                    connectionHandler.sendMessage("error Please enter a valid username & password");
+//                } else {
+//                    String response = Database.loginUser(split[1], split[2]);
+//                    connectionHandler.sendMessage(response);
+//                }
+//                break;
+//            // signup [username] [password]
+//            case "signup":
+//                if (split.length < 3) {
+//                    connectionHandler.sendMessage("error Please enter a valid username & password");
+//                } else {
+//                    String response = Database.registerUser(split[1], split[2]);
+//                    connectionHandler.sendMessage(response);
+//                }
+//                break;
+//            // search [username query]
+//            case "search":
+//                if (split.length > 1) {
+//                    String response = Database.searchUser(String.join(" ", Arrays.copyOfRange(split, 1, split.length)));
+//                    connectionHandler.sendMessage(response);
+//                }
+//                break;
+//        }
 
     }
 }

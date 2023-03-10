@@ -1,5 +1,6 @@
 package Connections;
 
+import Messages.Message;
 import Nodes.Node;
 
 import java.io.BufferedReader;
@@ -36,22 +37,23 @@ public class ConnectionHandler extends Thread {
             BufferedReader reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 
             // Read all incoming messages from the socket until connection is closed
-            String message;
+            Message message;
 
             do {
-                message = reader.readLine();
-                String[] messageSplit = message.split(" ");
+                String readMessage = reader.readLine();
 
-                // Register connection with user
-                String username = messageSplit[0];
-                parentNode.activeConnections.put(username, this);
+                if (readMessage != null) {
+                    message = new Message(readMessage);
 
-                // Set recipient address as serverIP of incoming message
-                String[] address = messageSplit[1].split(":");
-                this.recipientAddress = new InetSocketAddress(address[0], Integer.parseInt(address[1]));
+                    // Register connection with user
+                    parentNode.activeConnections.put(message.getSourceUsername(), this);
 
-                // Assign message to be handled by the node
-                parentNode.handleMessage(message, this);
+                    // Set recipient address as serverIP of incoming message
+                    this.recipientAddress = new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort());
+
+                    // Assign message to be handled by the node
+                    parentNode.handleMessage(message, this);
+                }
 
             } while (true);
 
@@ -63,7 +65,7 @@ public class ConnectionHandler extends Thread {
             // Close socket
             try {
                 this.socket.close();
-                System.out.println("Connection closed");
+                System.out.println("Connection closed with " + this.getRecipientAddress());
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
