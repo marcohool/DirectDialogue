@@ -13,7 +13,7 @@ public class Message {
     private final InetAddress sourceSocketAddress;
     private final int sourcePort;
     private final UUID uuid;
-    private final int ttl;
+    private int ttl;
     private final MessageDescriptor messageDescriptor;
     private final String messageContent;
 
@@ -72,4 +72,9 @@ public class Message {
     public String getMessageContent() {
         return messageContent;
     }
+
+    public void decrementTtl() {
+        this.ttl = this.ttl - 1;
+    }
+
 }

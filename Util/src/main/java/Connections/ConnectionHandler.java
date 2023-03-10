@@ -45,9 +45,6 @@ public class ConnectionHandler extends Thread {
                 if (readMessage != null) {
                     message = new Message(readMessage);
 
-                    // Register connection with user
-                    parentNode.activeConnections.put(message.getSourceUsername(), this);
-
                     // Set recipient address as serverIP of incoming message
                     this.recipientAddress = new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort());
 
@@ -72,13 +69,18 @@ public class ConnectionHandler extends Thread {
         }
     }
 
-    public void sendMessage(String message) {
-        try {
-            System.out.println("SENDING MESSAGE : '" + message + "' - FROM " + this.parentNode.getAddress());
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            writer.println(message);
-        } catch (IOException e) {
-            System.out.println("Failed to send message " + message + "\n" + e);
+    public void sendMessage(Message message) {
+        message.decrementTtl();
+
+        // Only send message if ttl is >= 0
+        if (message.getTtl() >= 0) {
+            try {
+                //System.out.println("SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
+                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+                writer.println(message);
+            } catch (IOException e) {
+                System.out.println("Failed to send message " + message + "\n" + e);
+            }
         }
     }
 

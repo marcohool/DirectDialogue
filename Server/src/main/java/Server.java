@@ -1,10 +1,8 @@
 import Connections.ConnectionHandler;
 import Messages.Message;
 import Nodes.Node;
-
 import java.net.InetSocketAddress;
 import java.sql.*;
-import java.util.Arrays;
 
 public class Server extends Node {
 

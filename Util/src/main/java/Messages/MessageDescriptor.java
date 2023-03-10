@@ -2,6 +2,6 @@ package Messages;
 
 public enum MessageDescriptor {
 
-    PING, QUERY
+    PING, PONG, QUERY, QUERYHIT, MESSAGE
 
 }

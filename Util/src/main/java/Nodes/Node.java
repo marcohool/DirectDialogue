@@ -12,7 +12,7 @@ import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 
 public abstract class Node implements INode {
-    private InetSocketAddress address = new InetSocketAddress("localhost", 0);
+    private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     public final HashMap<String, ConnectionHandler> activeConnections = new HashMap<>();
     private final String name;
 
@@ -39,23 +39,26 @@ public abstract class Node implements INode {
         }
     }
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, InetSocketAddress address) {
+    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, InetSocketAddress address, ConnectionHandler connection) {
         try {
-            // Check if there is an existing connection with recipient
-            ConnectionHandler connection = searchForEstablishedConnection(address);
-
-            // If there is no established connection create a new one
             if (connection == null) {
-                connection = new ConnectionHandler(address, this);
+                // Check if there is an existing connection with recipient
+                connection = searchForEstablishedConnection(address);
 
-                // Listen to incoming messages on this channel
-                connection.start();
+                // If there is no established connection create a new one
+                if (connection == null) {
+                    connection = new ConnectionHandler(address, this);
+
+                    // Listen to incoming messages on this channel
+                    connection.start();
+                }
+
             }
 
             Message message = new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent);
 
             // Send message across the connection
-            connection.sendMessage(message.toString());
+            connection.sendMessage(message);
 
         } catch (IOException e) {
             System.out.println("-- Connection refused to " + address + " --");
@@ -79,24 +82,6 @@ public abstract class Node implements INode {
         }
 
         return null;
-    }
-
-    protected ConnectionHandler searchForEstablishedConnection(String username) {
-
-        try {
-            for (String name : this.activeConnections.keySet()) {
-                if (name.equals(username)) {
-                    return this.activeConnections.get(name);
-                }
-            }
-
-        } catch (ConcurrentModificationException e) {
-            System.out.println("java.util.ConcurrentModificationException");
-            searchForEstablishedConnection(username);
-        }
-
-        return null;
-
     }
 
     public void setAddress(InetSocketAddress address) {
