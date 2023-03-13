@@ -13,8 +13,9 @@ public abstract class Node implements INode {
     private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     private InetSocketAddress serverAddress;
     public final HashMap<String, ConnectionHandler> activeConnections = new HashMap<>();
-    private final HashMap<String, ArrayList<Message>> messageHistory = new HashMap<>();
+    private final HashMap<String, ArrayList<Message>> chatHistory = new HashMap<>();
     protected final HashMap<String, String> messageQueue = new HashMap<>();
+    protected Message lastReceivedMessage = null;
     private String name;
 
     // Starting a server node
@@ -96,7 +97,7 @@ public abstract class Node implements INode {
         addMessageHistory(getUsernameFromAddress(this.activeConnections, connectionHandler).toString(), message);
     }
 
-    private static <String, ConnectionHandler> Set<String> getUsernameFromAddress(Map<String, ConnectionHandler> map, ConnectionHandler value) {
+    private synchronized static <String, ConnectionHandler> Set<String> getUsernameFromAddress(Map<String, ConnectionHandler> map, ConnectionHandler value) {
         return map.entrySet()
                 .stream()
                 .filter(entry -> Objects.equals(entry.getValue(), value))
@@ -147,11 +148,16 @@ public abstract class Node implements INode {
         return name;
     }
 
+    public HashMap<String, ArrayList<Message>> getChatHistory() {
+        return chatHistory;
+    }
+
+
     public void addMessageHistory(String recipient, Message message) {
-        if (this.messageHistory.containsKey(recipient)) {
-            this.messageHistory.get(recipient).add(message);
+        if (this.chatHistory.containsKey(recipient)) {
+            this.chatHistory.get(recipient).add(message);
         } else {
-            this.messageHistory.put(recipient, new ArrayList<>(List.of(message)));
+            this.chatHistory.put(recipient, new ArrayList<>(List.of(message)));
         }
     }
 

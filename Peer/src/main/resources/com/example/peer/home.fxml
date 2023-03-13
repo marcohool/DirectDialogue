@@ -15,70 +15,55 @@
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="0.0" minWidth="0.0" prefHeight="820.0" prefWidth="1400.0" style="-fx-background-color: #ffffff;" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.HomeController">
    <left>
-      <HBox prefHeight="820.0" prefWidth="329.0"
-            style="-fx-background-color: #f8f8f8; -fx-border-color: #e5e5e5; -fx-border-width: 1 1 0 0;"
-            BorderPane.alignment="CENTER">
+      <HBox prefHeight="820.0" prefWidth="329.0" style="-fx-background-color: #f8f8f8; -fx-border-color: #e5e5e5; -fx-border-width: 1 1 0 0;" BorderPane.alignment="CENTER">
          <VBox fx:id="vbox_recent" prefHeight="819.0" prefWidth="348.0">
             <HBox alignment="CENTER" minHeight="-Infinity" minWidth="-Infinity" prefHeight="69.0" prefWidth="328.0">
                <HBox alignment="CENTER_RIGHT" prefHeight="69.0" prefWidth="150.0">
-                  <Button fx:id="btn_new_convo_back" mnemonicParsing="false" prefHeight="12.0" prefWidth="3.0"
-                          style="-fx-shape: &quot;M352,128.4 L319.7,96 L160,256 L160,256 L160,256 L319.7,416 L352,383.6 L224.7,256 Z&quot;; -fx-background-color: #4f4f4f; -fx-cursor: hand;"
-                          visible="false">
+                  <Button fx:id="btn_new_convo_back" mnemonicParsing="false" prefHeight="12.0" prefWidth="3.0" style="-fx-shape: &quot;M352,128.4 L319.7,96 L160,256 L160,256 L160,256 L319.7,416 L352,383.6 L224.7,256 Z&quot;; -fx-background-color: #4f4f4f; -fx-cursor: hand;" visible="false">
                      <HBox.margin>
-                        <Insets top="10.0"/>
+                        <Insets top="10.0" />
                      </HBox.margin>
                   </Button>
                </HBox>
                <HBox alignment="CENTER_LEFT" prefHeight="69.0" prefWidth="323.0">
-                  <Label fx:id="lbl_new_convo" prefHeight="17.0" prefWidth="153.0" text="New conversation"
-                         textFill="#4f4f4f" visible="false">
+                  <Label fx:id="lbl_new_convo" prefHeight="17.0" prefWidth="153.0" text="New conversation" textFill="#4f4f4f" visible="false">
                      <HBox.margin>
-                        <Insets left="15.0" top="10.0"/>
+                        <Insets left="15.0" top="10.0" />
                      </HBox.margin>
                      <font>
-                        <Font name="Arial Bold" size="15.0"/>
+                        <Font name="Arial Bold" size="15.0" />
                      </font>
                   </Label>
                </HBox>
                <HBox alignment="CENTER_RIGHT" prefHeight="100.0" prefWidth="200.0">
-                  <Button fx:id="btn_new_convo" mnemonicParsing="false" prefHeight="33.0" prefWidth="33.0"
-                          style="-fx-shape: &quot;M17.2,0h59.47c4.73,0,9.03,1.93,12.15,5.05c3.12,3.12,5.05,7.42,5.05,12.15v38.36c0,4.73-1.93,9.03-5.05,12.15 c-3.12,3.12-7.42,5.05-12.15,5.05H46.93L20.81,95.21c-1.21,1.04-3.04,0.9-4.08-0.32c-0.51-0.6-0.74-1.34-0.69-2.07l1.39-20.07H17.2 c-4.73,0-9.03-1.93-12.15-5.05C1.93,64.59,0,60.29,0,55.56V17.2c0-4.73,1.93-9.03,5.05-12.15C8.16,1.93,12.46,0,17.2,0L17.2,0z M102.31,27.98c3.37,0.65,6.39,2.31,8.73,4.65c3.05,3.05,4.95,7.26,4.95,11.9v38.36c0,4.64-1.89,8.85-4.95,11.9 c-3.05,3.05-7.26,4.95-11.9,4.95h-0.61l1.42,20.44l0,0c0.04,0.64-0.15,1.3-0.6,1.82c-0.91,1.07-2.52,1.19-3.58,0.28l-26.22-23.2 H35.01l17.01-17.3h36.04c7.86,0,14.3-6.43,14.3-14.3V29.11C102.35,28.73,102.34,28.35,102.31,27.98L102.31,27.98z M25.68,43.68 c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9h30.35c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,43.68z M25.68,29.32c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9H68.7c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,29.32z M76.66,5.8H17.2c-3.13,0-5.98,1.28-8.05,3.35C7.08,11.22,5.8,14.06,5.8,17.2v38.36c0,3.13,1.28,5.98,3.35,8.05 c2.07,2.07,4.92,3.35,8.05,3.35h3.34v0.01l0.19,0.01c1.59,0.11,2.8,1.49,2.69,3.08l-1.13,16.26L43.83,67.8 c0.52-0.52,1.24-0.84,2.04-0.84h30.79c3.13,0,5.98-1.28,8.05-3.35c2.07-2.07,3.35-4.92,3.35-8.05V17.2c0-3.13-1.28-5.98-3.35-8.05 C82.65,7.08,79.8,5.8,76.66,5.8L76.66,5.8z&quot;; -fx-background-color: #4f4f4f; -fx-cursor: hand;">
+                  <Button fx:id="btn_new_convo" mnemonicParsing="false" prefHeight="33.0" prefWidth="33.0" style="-fx-shape: &quot;M17.2,0h59.47c4.73,0,9.03,1.93,12.15,5.05c3.12,3.12,5.05,7.42,5.05,12.15v38.36c0,4.73-1.93,9.03-5.05,12.15 c-3.12,3.12-7.42,5.05-12.15,5.05H46.93L20.81,95.21c-1.21,1.04-3.04,0.9-4.08-0.32c-0.51-0.6-0.74-1.34-0.69-2.07l1.39-20.07H17.2 c-4.73,0-9.03-1.93-12.15-5.05C1.93,64.59,0,60.29,0,55.56V17.2c0-4.73,1.93-9.03,5.05-12.15C8.16,1.93,12.46,0,17.2,0L17.2,0z M102.31,27.98c3.37,0.65,6.39,2.31,8.73,4.65c3.05,3.05,4.95,7.26,4.95,11.9v38.36c0,4.64-1.89,8.85-4.95,11.9 c-3.05,3.05-7.26,4.95-11.9,4.95h-0.61l1.42,20.44l0,0c0.04,0.64-0.15,1.3-0.6,1.82c-0.91,1.07-2.52,1.19-3.58,0.28l-26.22-23.2 H35.01l17.01-17.3h36.04c7.86,0,14.3-6.43,14.3-14.3V29.11C102.35,28.73,102.34,28.35,102.31,27.98L102.31,27.98z M25.68,43.68 c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9h30.35c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,43.68z M25.68,29.32c-1.6,0-2.9-1.3-2.9-2.9c0-1.6,1.3-2.9,2.9-2.9H68.7c1.6,0,2.9,1.3,2.9,2.9c0,1.6-1.3,2.9-2.9,2.9H25.68L25.68,29.32z M76.66,5.8H17.2c-3.13,0-5.98,1.28-8.05,3.35C7.08,11.22,5.8,14.06,5.8,17.2v38.36c0,3.13,1.28,5.98,3.35,8.05 c2.07,2.07,4.92,3.35,8.05,3.35h3.34v0.01l0.19,0.01c1.59,0.11,2.8,1.49,2.69,3.08l-1.13,16.26L43.83,67.8 c0.52-0.52,1.24-0.84,2.04-0.84h30.79c3.13,0,5.98-1.28,8.05-3.35c2.07-2.07,3.35-4.92,3.35-8.05V17.2c0-3.13-1.28-5.98-3.35-8.05 C82.65,7.08,79.8,5.8,76.66,5.8L76.66,5.8z&quot;; -fx-background-color: #4f4f4f; -fx-cursor: hand;">
                      <HBox.margin>
-                        <Insets right="25.0" top="10.0"/>
+                        <Insets right="25.0" top="10.0" />
                      </HBox.margin>
                      <tooltip>
                         <Tooltip text="New conversation">
                            <font>
-                              <Font name="Arial" size="12.0"/>
+                              <Font name="Arial" size="12.0" />
                            </font>
                         </Tooltip>
                      </tooltip>
                      <font>
-                        <Font name="Arial" size="12.0"/>
+                        <Font name="Arial" size="12.0" />
                      </font>
                   </Button>
                </HBox>
             </HBox>
             <HBox alignment="CENTER" minHeight="-Infinity" minWidth="-Infinity" prefHeight="48.0" prefWidth="328.0">
-               <TextField fx:id="tf_searchbar" alignment="TOP_LEFT" focusTraversable="false" prefHeight="25.0"
-                          prefWidth="369.0" promptText="Search"
-                          style="-fx-focus-color: transparent; -fx-background-insets: 0; -fx-background-color: #e9e9e9; -fx-border-radius: 10; -fx-background-radius: 10;">
+               <TextField fx:id="tf_searchbar" alignment="TOP_LEFT" focusTraversable="false" prefHeight="25.0" prefWidth="369.0" promptText="Search" style="-fx-focus-color: transparent; -fx-background-insets: 0; -fx-background-color: #e9e9e9; -fx-border-radius: 10; -fx-background-radius: 10;">
                   <HBox.margin>
-                     <Insets left="15.0" right="15.0"/>
+                     <Insets left="15.0" right="15.0" />
                   </HBox.margin>
                </TextField>
             </HBox>
             <HBox prefHeight="702.0" prefWidth="328.0" VBox.vgrow="ALWAYS">
-               <AnchorPane prefHeight="702.0" prefWidth="346.0"
-                           style="-fx-border-color: #e5e5e5; -fx-border-width: 0 1 0 0;">
-                  <ListView fx:id="lv_recent_contacts" layoutX="85.0" layoutY="60.0" prefHeight="702.0"
-                            prefWidth="309.0" stylesheets="@../../../stylesheets/listview.css"
-                            AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
-                            AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0"/>
-                  <ListView fx:id="lv_new_convo_results" layoutX="75.0" layoutY="273.0" prefHeight="702.0"
-                            prefWidth="329.0" stylesheets="@../../../stylesheets/listview.css" visible="false"
-                            AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
-                            AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0"/>
+               <AnchorPane prefHeight="702.0" prefWidth="346.0" style="-fx-border-color: #e5e5e5; -fx-border-width: 0 1 0 0;">
+                  <ListView fx:id="lv_recent_contacts" layoutX="85.0" layoutY="60.0" prefHeight="702.0" prefWidth="309.0" stylesheets="@../../../stylesheets/listview.css" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0" />
+                  <ListView fx:id="lv_new_convo_results" layoutX="75.0" layoutY="273.0" prefHeight="702.0" prefWidth="329.0" stylesheets="@../../../stylesheets/listview.css" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0" />
                </AnchorPane>
             </HBox>
          </VBox>
@@ -86,29 +71,23 @@
    </left>
    <center>
       <VBox minHeight="0.0" minWidth="0.0" prefHeight="200.0" prefWidth="100.0">
-         <HBox alignment="CENTER_LEFT" minHeight="-Infinity" minWidth="-Infinity" prefHeight="68.0" prefWidth="1071.0"
-               style="-fx-border-width: 0;" VBox.vgrow="NEVER">
+         <HBox alignment="CENTER_LEFT" minHeight="-Infinity" minWidth="-Infinity" prefHeight="68.0" prefWidth="1071.0" style="-fx-border-width: 0;" VBox.vgrow="NEVER">
             <Label fx:id="lbl_chat_name">
                <padding>
-                  <Insets left="30.0"/>
+                  <Insets left="30.0" />
                </padding>
                <font>
-                  <Font name="Berlin Sans FB" size="25.0"/>
+                  <Font name="Berlin Sans FB" size="25.0" />
                </font>
             </Label>
          </HBox>
-         <ScrollPane fx:id="sp_chat" minHeight="0.0" minWidth="0.0" prefHeight="686.0"
-                     prefWidth="1106.0" style="-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;"
-                     VBox.vgrow="ALWAYS">
-            <VBox fx:id="vbox_messages"/>
+         <ScrollPane fx:id="sp_chat" minHeight="0.0" minWidth="0.0" prefHeight="686.0" prefWidth="1106.0" style="-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;" VBox.vgrow="ALWAYS">
+            <VBox fx:id="vbox_messages" />
          </ScrollPane>
-         <HBox alignment="CENTER" minHeight="-Infinity" minWidth="0.0" prefHeight="67.0" prefWidth="1071.0"
-               VBox.vgrow="NEVER">
-            <TextField fx:id="tf_chat_message" minHeight="0.0" minWidth="0.0" promptText="Message"
-                       style="-fx-background-color: #e9e9e9; -fx-border-radius: 10; -fx-background-radius: 10;"
-                       HBox.hgrow="ALWAYS">
+         <HBox alignment="CENTER" minHeight="-Infinity" minWidth="0.0" prefHeight="67.0" prefWidth="1071.0" VBox.vgrow="NEVER">
+            <TextField fx:id="tf_chat_message" minHeight="0.0" minWidth="0.0" promptText="Message" style="-fx-background-color: #e9e9e9; -fx-border-radius: 10; -fx-background-radius: 10;" visible="false" HBox.hgrow="ALWAYS">
                <HBox.margin>
-                  <Insets left="15.0" right="15.0"/>
+                  <Insets left="15.0" right="15.0" />
                </HBox.margin>
             </TextField>
          </HBox>

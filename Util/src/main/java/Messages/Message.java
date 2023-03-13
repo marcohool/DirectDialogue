@@ -1,6 +1,7 @@
 package Messages;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.UUID;
@@ -74,6 +75,10 @@ public class Message {
 
     public void decrementTtl() {
         this.ttl = this.ttl - 1;
+    }
+
+    public InetSocketAddress getInetSocketAddress() {
+        return new InetSocketAddress(this.sourceSocketAddress, sourcePort);
     }
 
 }

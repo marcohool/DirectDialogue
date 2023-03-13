@@ -88,12 +88,14 @@ public class Peer extends Nodes.Node {
         // Only handle message if it has not been received before & ttl > 0
         if (!this.seenMessageUUIDs.contains(message.getUuid())) {
             this.seenMessageUUIDs.add(message.getUuid());
+            this.lastReceivedMessage = message;
 
             // If message is coming from server
             if (new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort()).equals(this.serverAddress)) {
                 switch (message.getMessageDescriptor()) {
                     case LOGIN_SUCCESS:
                         this.setName(message.getMessageContent());
+                        pingRandomInitialPeer();
                         changeScene(this.lastEvent, "home.fxml");
                         break;
 
@@ -132,6 +134,9 @@ public class Peer extends Nodes.Node {
                         // Register connection with user
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
+                        // If this peer needs more connection, send QUERY
+                        this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "6").toString(), 1, connectionHandler);
+
                         // Check queue for any messages to be sent to new connection
                         for (Map.Entry<String, String> queuedMessaged : this.messageQueue.entrySet()) {
                             // If there is a queued message, send it
@@ -147,7 +152,10 @@ public class Peer extends Nodes.Node {
 
                         // If query is asking for connected peers respond with IPs of X neighbours
                         if (query.getQueryDescriptor().equals(QueryDescriptor.NEIGHBOURHOOD)) {
-                            this.sendMessage(MessageDescriptor.QUERYHIT, getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent())), 1, connectionHandler);
+                            String returnedAddresses = getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent()));
+                            if (!returnedAddresses.equals("")) {
+                                this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 1, connectionHandler);
+                            }
                         }
 
                         // If query is looking for username
@@ -173,6 +181,7 @@ public class Peer extends Nodes.Node {
                         // Send PING to all returned IPs
                         for (String ip : message.getMessageContent().split(" ")) {
                             String[] ipSplit = ip.split(":");
+                            System.out.println(Arrays.toString(ipSplit));
                             this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
                         }
                         break;
@@ -257,6 +266,15 @@ public class Peer extends Nodes.Node {
         }
 
         return connectedIPs.toString();
+    }
+
+    private void pingRandomInitialPeer() {
+        Random random = new Random();
+
+        InetSocketAddress peerToPing = initialPeers[random.nextInt(initialPeers.length)];
+
+        // Ping random initial peer
+        this.sendMessage(MessageDescriptor.PING, null, 1, peerToPing);
     }
 
     // Util method to wait for connections to establish
