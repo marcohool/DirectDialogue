@@ -1,7 +1,6 @@
 package com.example.peer;
 
 import Connections.ConnectionHandler;
-import Controllers.ControllerInterface;
 import Controllers.HomeController;
 import Messages.Message;
 import Messages.MessageDescriptor;
@@ -23,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Peer extends Nodes.Node {
     private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
+    private final HashMap<String, ArrayList<StoredMessage>> chatHistory = new HashMap<>();
     private ActionEvent lastEvent;
     private HomeController homeController;
     private final int minNoOfConnections = 3;
@@ -189,10 +189,24 @@ public class Peer extends Nodes.Node {
                         break;
 
                     case MESSAGE:
-                        this.homeController.displayMessage(message, false);
+                        this.homeController.displayMessage(message.getMessageContent(), message.getSourceUsername(), false);
                         System.out.println("message all good -> " + message);
+
                 }
             }
+        }
+    }
+
+    public HashMap<String, ArrayList<StoredMessage>> getChatHistory() {
+        return chatHistory;
+    }
+
+
+    public void addMessageHistory(String recipient, StoredMessage message) {
+        if (this.chatHistory.containsKey(recipient)) {
+            this.chatHistory.get(recipient).add(message);
+        } else {
+            this.chatHistory.put(recipient, new ArrayList<>(List.of(message)));
         }
     }
 

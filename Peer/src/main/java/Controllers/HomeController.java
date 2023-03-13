@@ -4,8 +4,10 @@ import Messages.Message;
 import Messages.MessageDescriptor;
 import com.example.peer.Peer;
 import com.example.peer.PeerUI;
+import com.example.peer.StoredMessage;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -74,12 +76,10 @@ public class HomeController implements Initializable {
         });
 
         // Listener for new conversation listview
-        lv_new_convo_results.getSelectionModel().selectedItemProperty().addListener((observableValue, s, selected) -> {
-            if (selected != null) {
-                openChat(selected);
-            }
-        });
+        lv_new_convo_results.setCellFactory(lv -> setCells());
 
+        // Listener for new conversation listview
+        lv_recent_contacts.setCellFactory(lv -> setCells());
 
         tf_chat_message.setOnAction(actionEvent -> {
             String messageToSend = tf_chat_message.getText();
@@ -87,11 +87,29 @@ public class HomeController implements Initializable {
                 // Send message
                 peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
 
+                // Add message to message history
+                peer.addMessageHistory(lbl_chat_name.getText(), new StoredMessage(lbl_chat_name.getText(), peer.getName(), messageToSend));
+
+                // Move chat to top of listview
+                ObservableList<String> items = lv_recent_contacts.getItems();
+                int index = lv_recent_contacts.getItems().indexOf(lbl_chat_name.getText());
+
+                if (index > 0) {
+                    String item = items.remove(index);
+                    items.add(0, item);
+                    lv_recent_contacts.scrollTo(0);
+                }
+
+                if (index == -1) {
+                    items.add(0, lbl_chat_name.getText());
+                    lv_recent_contacts.scrollTo(0);
+                }
+
+
+                // Display message on GUI
                 displayMessage(messageToSend, lbl_chat_name.getText(), true);
             }
         });
-
-        vbox_messages.heightProperty().addListener((observableValue, number, t1) -> System.out.println("?"));
 
         btn_new_convo.setOnAction(actionEvent -> toggleNewConvo());
 
@@ -109,11 +127,11 @@ public class HomeController implements Initializable {
         lbl_chat_name.setText(username);
         vbox_messages.getChildren().clear();
 
-        ArrayList<Message> messages = peer.getChatHistory().get(username);
+        ArrayList<StoredMessage> messages = peer.getChatHistory().get(username);
 
         if (messages != null) {
-            for (Message message : messages) {
-                displayMessage(message, !message.getSourceUsername().equals(username));
+            for (StoredMessage message : messages) {
+                displayMessage(message, !message.getSourceUsername().equals(peer.getName()));
             }
         }
     }
@@ -151,8 +169,31 @@ public class HomeController implements Initializable {
         }
     }
 
-    public void displayMessage(Message message, boolean sent) {
+    public void displayMessage(StoredMessage message, boolean sent) {
         displayMessage(message.getMessageContent(), message.getSourceUsername(), sent);
+    }
+
+    private ListCell<String> setCells() {
+        ListCell<String> cell = new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty) {
+                    setText(null);
+                } else {
+                    setText(item);
+                }
+            }
+        };
+
+        cell.setOnMouseClicked(event -> {
+            if (!cell.isEmpty()) {
+                String item = cell.getItem();
+                openChat(item);
+            }
+        });
+
+        return cell;
     }
 
     private void toggleNewConvo() {
@@ -162,8 +203,10 @@ public class HomeController implements Initializable {
             lbl_new_convo.setVisible(false);
             btn_new_convo_back.setVisible(false);
             lv_new_convo_results.setVisible(false);
+            lv_new_convo_results.getItems().clear();
             lv_recent_contacts.setVisible(true);
             tf_searchbar.setPromptText("Search");
+            tf_searchbar.clear();
         } else {
             lbl_new_convo.setVisible(true);
             btn_new_convo_back.setVisible(true);
@@ -171,6 +214,7 @@ public class HomeController implements Initializable {
             lv_new_convo_results.setVisible(true);
             tf_searchbar.setPromptText("Search by username");
             btn_new_convo.setVisible(false);
+            tf_searchbar.clear();
         }
     }
 

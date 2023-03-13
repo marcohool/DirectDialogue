@@ -16,7 +16,6 @@ public abstract class Node implements INode {
     private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     private InetSocketAddress serverAddress;
     public final HashMap<String, ConnectionHandler> activeConnections = new HashMap<>();
-    private final HashMap<String, ArrayList<Message>> chatHistory = new HashMap<>();
     protected final HashMap<String, String> messageQueue = new HashMap<>();
     protected Message lastReceivedMessage = null;
     private String name;
@@ -96,10 +95,6 @@ public abstract class Node implements INode {
         // Send message across the connection
         connectionHandler.sendMessage(message);
 
-        // Register sent message
-        if (messageDescriptor.equals(MessageDescriptor.MESSAGE)) {
-            addMessageHistory(getUsernameFromAddress(this.activeConnections, connectionHandler).toString(), message);
-        }
     }
 
     private synchronized static <String, ConnectionHandler> Set<String> getUsernameFromAddress(Map<String, ConnectionHandler> map, ConnectionHandler value) {
@@ -151,19 +146,6 @@ public abstract class Node implements INode {
 
     public String getName() {
         return name;
-    }
-
-    public HashMap<String, ArrayList<Message>> getChatHistory() {
-        return chatHistory;
-    }
-
-
-    public void addMessageHistory(String recipient, Message message) {
-        if (this.chatHistory.containsKey(recipient)) {
-            this.chatHistory.get(recipient).add(message);
-        } else {
-            this.chatHistory.put(recipient, new ArrayList<>(List.of(message)));
-        }
     }
 
 }

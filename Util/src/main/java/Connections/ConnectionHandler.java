@@ -45,9 +45,6 @@ public class ConnectionHandler extends Thread {
                     // Set recipient address as serverIP of incoming message
                     this.recipientAddress = new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort());
 
-                    // Add to received messages
-                    parentNode.addMessageHistory(message.getSourceUsername(), message);
-
                     // Assign message to be handled by the node
                     parentNode.handleMessage(message, this);
                 }

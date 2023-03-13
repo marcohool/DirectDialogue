@@ -3,6 +3,7 @@ package Messages;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ public class Message {
     private int ttl;
     private final MessageDescriptor messageDescriptor;
     private final String messageContent;
+    private final LocalDateTime currentDateTime = LocalDateTime.now();
+
 
     public Message(String message) throws UnknownHostException {
         String[] messageSplit = message.split(" ");
@@ -81,4 +84,7 @@ public class Message {
         return new InetSocketAddress(this.sourceSocketAddress, sourcePort);
     }
 
+    public LocalDateTime getCurrentDateTime() {
+        return currentDateTime;
+    }
 }
