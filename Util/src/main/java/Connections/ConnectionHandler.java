@@ -2,14 +2,11 @@ package Connections;
 
 import Messages.Message;
 import Nodes.Node;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class ConnectionHandler extends Thread {
     private final Socket socket;
@@ -47,6 +44,9 @@ public class ConnectionHandler extends Thread {
 
                     // Set recipient address as serverIP of incoming message
                     this.recipientAddress = new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort());
+
+                    // Add to received messages
+                    parentNode.addMessageHistory(message.getSourceUsername(), message);
 
                     // Assign message to be handled by the node
                     parentNode.handleMessage(message, this);

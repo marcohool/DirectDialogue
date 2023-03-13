@@ -1,66 +1,73 @@
 import Connections.ConnectionHandler;
 import Messages.Message;
+import Messages.MessageDescriptor;
 import Nodes.Node;
+
 import java.net.InetSocketAddress;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 public class Server extends Node {
 
-    public Server(String name, String address, int port)  {
-        super(name, new InetSocketAddress(address, port));
+    public Server(String name, InetSocketAddress address) {
+        super(name, address);
     }
 
     public static void main(String[] args) {
 
         // Start server on specified IP and port
-        Server server = new Server("server1", "192.168.68.63", 1926);
+        Server server = new Server("server1", new InetSocketAddress("192.168.68.63", 1926));
 
     }
 
     public void handleMessage(Message message, ConnectionHandler connectionHandler) {
         System.out.println(message + " received from " + connectionHandler.getRecipientAddress());
+        String[] messageSplit = message.getMessageContent().split(" ");
 
-//        String[] split = message.split("\\s+");
-//
-//        switch (split[0]){
-//            // login [username] [password]
-//            case "login":
-//                if (split.length < 3) {
-//                    connectionHandler.sendMessage("error Please enter a valid username & password");
-//                } else {
-//                    String response = Database.loginUser(split[1], split[2]);
-//                    connectionHandler.sendMessage(response);
-//                }
-//                break;
-//            // signup [username] [password]
-//            case "signup":
-//                if (split.length < 3) {
-//                    connectionHandler.sendMessage("error Please enter a valid username & password");
-//                } else {
-//                    String response = Database.registerUser(split[1], split[2]);
-//                    connectionHandler.sendMessage(response);
-//                }
-//                break;
-//            // search [username query]
-//            case "search":
-//                if (split.length > 1) {
-//                    String response = Database.searchUser(String.join(" ", Arrays.copyOfRange(split, 1, split.length)));
-//                    connectionHandler.sendMessage(response);
-//                }
-//                break;
-//        }
-
+        switch (message.getMessageDescriptor()) {
+            case LOGIN:
+                if (messageSplit.length < 2) {
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_ERROR, "error Please enter a valid username & password"));
+                } else {
+                    MessageDescriptor response = Database.loginUser(messageSplit[0], messageSplit[1]);
+                    if (response.equals(MessageDescriptor.LOGIN_SUCCESS)) {
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_SUCCESS, messageSplit[0]));
+                    } else {
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_ERROR, null));
+                    }
+                }
+                break;
+            case SIGNUP:
+                if (messageSplit.length < 2) {
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_ERROR, "No username/password"));
+                } else {
+                    String response = Database.registerUser(messageSplit[0], messageSplit[1]);
+                    if (response.equals("success")) {
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_SUCCESS, null));
+                    } else {
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_ERROR, response));
+                    }
+                }
+                break;
+            // search [username query]
+            case SEARCH:
+                if (messageSplit.length > 0) {
+                    ArrayList<String> responses = Database.searchUser(message.getMessageContent());
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SEARCH, String.join(" ", responses)));
+                }
+                break;
+        }
     }
 }
 
-
 class Database {
 
-    static String searchUser(String username) {
+    static ArrayList<String> searchUser(String username) {
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
-        StringBuilder returnMessage = new StringBuilder("error SQLException");
+        ArrayList<String> searchResults = new ArrayList<>();
 
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/p2p-chat", "root", "123123");
@@ -68,9 +75,8 @@ class Database {
             ps.setString(1, "%" + username + "%");
             rs = ps.executeQuery();
 
-            returnMessage = new StringBuilder("results");
             while (rs.next()) {
-                returnMessage.append(" ").append(rs.getString("username"));
+                searchResults.add(rs.getString("username"));
             }
 
         } catch (SQLException e) {
@@ -79,15 +85,15 @@ class Database {
             closeResources(conn, new PreparedStatement[]{ps}, rs);
         }
 
-        return returnMessage.toString();
+        return searchResults;
     }
 
 
-    static String loginUser(String username, String password) {
+    static MessageDescriptor loginUser(String username, String password) {
         Connection conn = null;
         PreparedStatement ps = null;
         ResultSet rs = null;
-        String returnMessage = "error SQLException";
+        MessageDescriptor returnMessage = MessageDescriptor.LOGIN_ERROR;
 
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/p2p-chat", "root", "123123");
@@ -95,16 +101,10 @@ class Database {
             ps.setString(1, username);
             rs = ps.executeQuery();
 
-            if (!rs.isBeforeFirst()) {
-                returnMessage = "error Invalid username/password";
-            } else {
-                while (rs.next()) {
-                    String retrievedPassword = rs.getString("password");
-                    if (retrievedPassword.equals(password)) {
-                        returnMessage = "login success";
-                    } else {
-                        returnMessage = "error Invalid username/password";
-                    }
+            if (rs.isBeforeFirst()) {
+                rs.next();
+                if (rs.getString("password").equals(password)) {
+                    returnMessage = MessageDescriptor.LOGIN_SUCCESS;
                 }
             }
 
@@ -123,7 +123,7 @@ class Database {
         PreparedStatement psInsert = null;
         PreparedStatement psCheck = null;
         ResultSet rs = null;
-        String returnMessage = "error SQLException";
+        String returnMessage = "SQLException";
 
         try {
             conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/p2p-chat", "root", "123123");
@@ -137,7 +137,6 @@ class Database {
                 returnMessage = "Username taken";
             }
 
-            // Else register user
             else {
                 if (!username.equals("") && !password.equals("")) {
 
@@ -146,7 +145,7 @@ class Database {
                     psInsert.setString(2, password);
                     psInsert.executeUpdate();
 
-                    returnMessage =  "signup success";
+                    returnMessage = "success";
                 } else {
                     returnMessage = "You must enter a valid username and password";
                 }
@@ -173,12 +172,14 @@ class Database {
             try {
                 rs.close();
             } catch (SQLException e) {
-                System.out.println("Error closing resultset: " + e.getMessage());
+                System.out.println("Error closing ResultSet: " + e.getMessage());
             }
         }
         for (PreparedStatement preparedStatement : ps) {
             try {
-                preparedStatement.close();
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
             } catch (SQLException e) {
                 System.out.println("Error closing prepared statement: " + e.getMessage());
             }

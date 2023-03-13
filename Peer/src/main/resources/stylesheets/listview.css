@@ -1,0 +1,31 @@
+
+.list-view {
+    -fx-background-color:  #f8f8f8;
+    -fx-padding: 0 15 0 15;
+    -fx-border-width: 0 0 0 0;
+    -fx-focus-color: transparent;
+}
+
+.list-view .list-cell {
+    -fx-background-color:  #f8f8f8;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-pref-height: 40;
+    -fx-padding: 15 15 15 15;
+}
+
+.list-view .list-cell:hover {
+    -fx-background-color: #e5e5e5;
+}
+
+.list-view .list-cell:filled {
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-font-family: Arial;
+    -fx-padding: 0 0 0 30;
+}
+
+.list-view .list-cell:empty {
+    -fx-opacity: 0;
+    -fx-cursor: default;
+}

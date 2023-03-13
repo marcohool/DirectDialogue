@@ -1,20 +1,48 @@
 package com.example.peer;
 
 import Connections.ConnectionHandler;
+import Controllers.ControllerInterface;
+import Controllers.HomeController;
 import Messages.Message;
 import Messages.MessageDescriptor;
 import Messages.Query;
 import Messages.QueryDescriptor;
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.stage.Screen;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Peer extends Nodes.Node {
     private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
+    private ActionEvent lastEvent;
+    private HomeController homeController;
+    private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.68.63", 1926);
+
+    private static final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
+            new InetSocketAddress("127.0.0.1", 1),
+            new InetSocketAddress("127.0.0.1", 2),
+            new InetSocketAddress("127.0.0.1", 3),
+            new InetSocketAddress("127.0.0.1", 4),
+            new InetSocketAddress("127.0.0.1", 5),
+    };
 
     public Peer(String username) {
         super(username);
+        setServerAddress(serverAddress);
+    }
+
+    public Peer() {
+        super(null);
+        setServerAddress(serverAddress);
     }
 
     public Peer(String username, InetSocketAddress address) {
@@ -23,51 +51,34 @@ public class Peer extends Nodes.Node {
 
     public static void main(String[] args) {
 
-        // Configure server address
-        String serverIPAddress = "192.168.68.63";
-        int serverPort = 1926;
-        InetSocketAddress serverAddress = new InetSocketAddress(serverIPAddress, serverPort);
+////      --------------------- MANUAL TESTING ---------------------
+//      Peer6 to join the network and request 2 neighbour peers from initial peer
+//        Peer peer6 = new Peer("lautahool");
+//        peer6.sendMessage(MessageDescriptor.PING, null, 1, initialPeers[0]);
+//        wait(1);
+//        System.out.println(peer6.getName() +" -> " + peer6.activeConnections);
+//        peer6.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "2").toString(), 1, peer6.getActiveConnections().get("peer0"));
+//
+//        wait(1);
+//
+//        // Peer7 to join the network and request for "lautahool" from initial peer
+//        Peer peer7 = new Peer("blol");
+//        peer7.sendMessage(MessageDescriptor.PING, null, 1, initialPeers[1]);
+//        wait(1);
+//        System.out.println(peer7.getName() +" -> " + peer7.activeConnections);
+//        peer7.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, "lautahool").toString(), 3, peer7.getActiveConnections().get("peer1"));
+//
+//        // Wait and print connections
+//        wait(1);
+//
+//        System.out.println(peer6.getName() +" -> " + peer6.activeConnections);
+//        System.out.println(peer7.getName() +" -> " + peer7.activeConnections);
+//
+//        wait(1);
+//        -----------------------------------------------------------
 
-        // Set initial peer nodes and connect them to each other
-        ArrayList<Peer> initialPeers = setInitialPeers(new InetSocketAddress[]{
-                new InetSocketAddress("127.0.0.1", 1),
-                new InetSocketAddress("127.0.0.1", 2),
-                new InetSocketAddress("127.0.0.1", 3),
-                new InetSocketAddress("127.0.0.1", 4),
-                new InetSocketAddress("127.0.0.1", 5),
-        });
-
-        // Print active connections of preconfigured nodes
-        for (Peer peer : initialPeers) {
-            System.out.print("\n" + peer.getName() + " (" + peer.getAddress() + ") is connected to:");
-            peer.getActiveConnections().forEach((key, value) -> System.out.print(" " + key + " (" + value.getRecipientAddress() + ") | "));
-        }
-
-        wait(1);
-
-        // Peer6 to join the network and request 2 neighbour peers from initial peer
-        Peer peer6 = new Peer("lautahool");
-        peer6.sendMessage(MessageDescriptor.PING, null, 1, initialPeers.get(0).getAddress(), null);
-        wait(1);
-        System.out.println(peer6.getActiveConnections());
-        peer6.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "2").toString(), 1, peer6.getActiveConnections().get(initialPeers.get(0).getName()).getRecipientAddress(), null);
-
-        wait(1);
-
-        // Peer7 to join the network and request for "lautahool" from initial peer
-        Peer peer7 = new Peer("blol");
-        peer7.sendMessage(MessageDescriptor.PING, null, 1, initialPeers.get(1).getAddress(), null);
-        wait(1);
-        peer7.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, "lautahool").toString(), 3,  peer7.getActiveConnections().get(initialPeers.get(1).getName()).getRecipientAddress(), null);
-
-
-        // Wait and print connections
-        wait(1);
-
-        System.out.println(peer6.getName() +" -> " + peer6.activeConnections);
-        System.out.println(peer7.getName() +" -> " + peer7.activeConnections);
-
-        wait(1);
+        PeerUI ui = new PeerUI();
+        ui.start();
 
     }
 
@@ -78,61 +89,143 @@ public class Peer extends Nodes.Node {
         if (!this.seenMessageUUIDs.contains(message.getUuid())) {
             this.seenMessageUUIDs.add(message.getUuid());
 
-            switch (message.getMessageDescriptor()) {
-                case PING:
-                    // Register connection with user
-                    this.activeConnections.put(message.getSourceUsername(), connectionHandler);
+            // If message is coming from server
+            if (new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort()).equals(this.serverAddress)) {
+                switch (message.getMessageDescriptor()) {
+                    case LOGIN_SUCCESS:
+                        this.setName(message.getMessageContent());
+                        changeScene(this.lastEvent, "home.fxml");
+                        break;
 
-                    // Respond with PONG
-                    this.sendMessage(MessageDescriptor.PONG, null, 1, null, connectionHandler);
-                    break;
+                    case LOGIN_ERROR:
+                        displayAlert("Login unsuccessful");
+                        break;
 
-                case PONG:
-                    // Register connection with user
-                    this.activeConnections.put(message.getSourceUsername(), connectionHandler);
-                    break;
+                    case SIGNUP_ERROR:
+                        displayAlert(message.getMessageContent());
+                        break;
 
-                case QUERY:
-                    // Get query type
-                    Query query = new Query(message.getMessageContent());
-
-                    // If query is asking for connected peers respond with IPs of X neighbours
-                    if (query.getQueryDescriptor().equals(QueryDescriptor.NEIGHBOURHOOD)) {
-                        this.sendMessage(MessageDescriptor.QUERYHIT, getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent())), 1, null, connectionHandler);
-                    }
-
-                    // If query is looking for username
-                    if (query.getQueryDescriptor().equals(QueryDescriptor.USER)) {
-
-                        // If this peer is connected to the user
-                        if (this.activeConnections.containsKey(query.getQueryContent())) {
-                            this.sendMessage(MessageDescriptor.QUERYHIT, String.valueOf(this.activeConnections.get(query.getQueryContent()).getRecipientAddress()).replace("/", ""), 1, new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort()), null);
+                    case SEARCH:
+                        try {
+                            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("home.fxml"));
+                            fxmlLoader.load();
+                            this.homeController.updateUserSearchLV(message.getMessageContent().split(" "));
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-
-                        // Else echo message
-                        else {
-                            for (ConnectionHandler connection : this.activeConnections.values()) {
-                                message.decrementTtl();
-                                connection.sendMessage(message);
-                            }
-                        }
-                    }
-                    break;
-
-                case QUERYHIT:
-
-                    // Send PING to all returned IPs
-                    for (String ip : message.getMessageContent().split(" ")) {
-                        String[] ipSplit = ip.split(":");
-                        this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])), null);
-                    }
-                    break;
-
-                case MESSAGE:
-                    System.out.println("message all good -> " + message);
+                        break;
+                }
             }
 
+            // If message is coming from peer
+            else {
+                switch (message.getMessageDescriptor()) {
+                    case PING:
+                        // Register connection with user
+                        this.activeConnections.put(message.getSourceUsername(), connectionHandler);
+
+                        // Respond with PONG
+                        this.sendMessage(MessageDescriptor.PONG, null, 1, connectionHandler);
+                        break;
+
+                    case PONG:
+                        // Register connection with user
+                        this.activeConnections.put(message.getSourceUsername(), connectionHandler);
+
+                        // Check queue for any messages to be sent to new connection
+                        for (Map.Entry<String, String> queuedMessaged : this.messageQueue.entrySet()) {
+                            // If there is a queued message, send it
+                            if (queuedMessaged.getKey().equals(message.getSourceUsername())) {
+                                this.sendMessage(MessageDescriptor.MESSAGE, queuedMessaged.getValue(), 1, queuedMessaged.getKey());
+                            }
+                        }
+                        break;
+
+                    case QUERY:
+                        // Get query type
+                        Query query = new Query(message.getMessageContent());
+
+                        // If query is asking for connected peers respond with IPs of X neighbours
+                        if (query.getQueryDescriptor().equals(QueryDescriptor.NEIGHBOURHOOD)) {
+                            this.sendMessage(MessageDescriptor.QUERYHIT, getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent())), 1, connectionHandler);
+                        }
+
+                        // If query is looking for username
+                        if (query.getQueryDescriptor().equals(QueryDescriptor.USER)) {
+
+                            // If this peer is connected to the user
+                            if (this.activeConnections.containsKey(query.getQueryContent())) {
+                                this.sendMessage(MessageDescriptor.QUERYHIT, String.valueOf(this.activeConnections.get(query.getQueryContent()).getRecipientAddress()).replace("/", ""), 1, connectionHandler);
+                            }
+
+                            // Else echo message
+                            else {
+                                for (ConnectionHandler connection : this.activeConnections.values()) {
+                                    message.decrementTtl();
+                                    connection.sendMessage(message);
+                                }
+                            }
+                        }
+                        break;
+
+                    case QUERYHIT:
+
+                        // Send PING to all returned IPs
+                        for (String ip : message.getMessageContent().split(" ")) {
+                            String[] ipSplit = ip.split(":");
+                            this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
+                        }
+                        break;
+
+                    case MESSAGE:
+                        System.out.println("message all good -> " + message);
+                }
+            }
         }
+    }
+
+    public void changeScene(ActionEvent event, String fxmlFile) {
+        Platform.runLater(
+                () -> {
+                    try {
+                        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource(fxmlFile));
+                        Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
+                        stage.setTitle("DirectDialogue");
+
+                        if (fxmlFile.equals("home.fxml")) {
+                            stage.setScene(new Scene(fxmlLoader.load(), 1400, 820));
+                        } else {
+                            stage.setScene(new Scene(fxmlLoader.load(), 600, 400));
+                        }
+
+                        // Center stage
+                        Rectangle2D primScreenBounds = Screen.getPrimary().getVisualBounds();
+                        stage.setX((primScreenBounds.getWidth() - stage.getWidth()) / 2);
+                        stage.setY((primScreenBounds.getHeight() - stage.getHeight()) / 2);
+
+                        // Set peer in scenes controller
+                        if (fxmlLoader.getController() instanceof HomeController) {
+                            this.homeController = fxmlLoader.getController();
+                        }
+
+                        // Show stage
+                        stage.show();
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+        );
+    }
+
+    public void displayAlert(String message){
+        Platform.runLater(
+                () -> {
+                    Alert alert = new Alert(Alert.AlertType.ERROR);
+                    alert.setContentText(message);
+                    alert.show();
+                }
+        );
     }
 
     private String getRandomAddresses(String requester, int x) {
@@ -167,7 +260,7 @@ public class Peer extends Nodes.Node {
     }
 
     // Util method to wait for connections to establish
-    private static void wait(int seconds) {
+    public static void wait(int seconds) {
         try {
             TimeUnit.SECONDS.sleep(seconds);
         } catch (InterruptedException e) {
@@ -175,29 +268,8 @@ public class Peer extends Nodes.Node {
         }
     }
 
-
-    private void flood(String message) {
-
-    }
-
-    private static ArrayList<Peer> setInitialPeers(InetSocketAddress[] addresses) {
-        ArrayList<Peer> peers = new ArrayList<>();
-
-        // Declare peers
-        for (int i = 0; i < addresses.length; i++) {
-            peers.add(new Peer("peer" + i ,addresses[i]));
-        }
-
-        // Connect all peers together
-        for (Peer peer1 : peers) {
-            for (Peer peer2: peers) {
-                if (peer1 != peer2) {
-                    peer1.sendMessage(MessageDescriptor.PING, null, 1, peer2.getAddress(), null);
-                }
-            }
-        }
-
-        return peers;
+    public void setLastEvent(ActionEvent lastEvent) {
+        this.lastEvent = lastEvent;
     }
 
 }

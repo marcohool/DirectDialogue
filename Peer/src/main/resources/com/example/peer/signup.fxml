@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.text.Font?>
+
+<HBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
+      prefWidth="600.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="Controllers.SignupController">
+   <AnchorPane prefHeight="400.0" prefWidth="230.0" style="-fx-background-color: #E34234;">
+      <Label layoutX="19.0" layoutY="77.0" text="DirectDialogue">
+         <font>
+            <Font name="Berlin Sans FB" size="27.0"/>
+         </font>
+      </Label>
+   </AnchorPane>
+   <AnchorPane prefHeight="400.0" prefWidth="418.0">
+      <Label layoutX="25.0" layoutY="152.0" text="Username">
+         <font>
+            <Font name="Arial" size="24.0"/>
+         </font>
+      </Label>
+      <Label layoutX="28.0" layoutY="209.0" text="Password">
+         <font>
+            <Font name="Arial" size="24.0"/>
+         </font>
+      </Label>
+      <TextField fx:id="tf_username" layoutX="158.0" layoutY="150.0" prefHeight="30.0" prefWidth="198.0"/>
+      <Label layoutX="158.0" layoutY="54.0" text="Sign Up">
+         <font>
+            <Font name="Berlin Sans FB" size="34.0"/>
+         </font>
+      </Label>
+      <PasswordField fx:id="pf_password" layoutX="158.0" layoutY="207.0" prefHeight="30.0" prefWidth="198.0"/>
+      <Button fx:id="bt_signup" layoutX="98.0" layoutY="282.0" mnemonicParsing="false" prefHeight="38.0"
+              prefWidth="198.0" style="-fx-background-color: #E34234; -fx-cursor: hand;" text="Sign Up">
+         <font>
+            <Font name="Arial Rounded MT Bold" size="18.0"/>
+         </font>
+      </Button>
+      <Label layoutX="64.0" layoutY="353.0" text="Already have an account?">
+         <font>
+            <Font name="Arial Rounded MT Bold" size="14.0"/>
+         </font>
+      </Label>
+      <Button fx:id="bt_login" layoutX="240.0" layoutY="348.0" mnemonicParsing="false"
+              style="-fx-background-color: transparent; -fx-cursor: hand;" text="Login here" textFill="#3352cc"
+              underline="true">
+         <font>
+            <Font name="Arial Rounded MT Bold" size="14.0"/>
+         </font>
+      </Button>
+   </AnchorPane>
+</HBox>
