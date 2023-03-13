@@ -75,7 +75,7 @@ public class ConnectionHandler extends Thread {
         // Only send message if ttl is >= 0
         if (message.getTtl() >= 0) {
             try {
-                //System.out.println("SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
+                System.out.println("SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
                 PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
                 writer.println(message);
             } catch (IOException e) {

@@ -25,6 +25,7 @@ public class Peer extends Nodes.Node {
     private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
     private ActionEvent lastEvent;
     private HomeController homeController;
+    private final int minNoOfConnections = 3;
     private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.68.63", 1926);
 
     private static final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
@@ -135,7 +136,9 @@ public class Peer extends Nodes.Node {
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
                         // If this peer needs more connection, send QUERY
-                        this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "6").toString(), 1, connectionHandler);
+                        if (this.activeConnections.size() < minNoOfConnections) {
+                            this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "1").toString(), 1, connectionHandler);
+                        }
 
                         // Check queue for any messages to be sent to new connection
                         for (Map.Entry<String, String> queuedMessaged : this.messageQueue.entrySet()) {
@@ -181,12 +184,12 @@ public class Peer extends Nodes.Node {
                         // Send PING to all returned IPs
                         for (String ip : message.getMessageContent().split(" ")) {
                             String[] ipSplit = ip.split(":");
-                            System.out.println(Arrays.toString(ipSplit));
                             this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
                         }
                         break;
 
                     case MESSAGE:
+                        this.homeController.displayMessage(message, false);
                         System.out.println("message all good -> " + message);
                 }
             }

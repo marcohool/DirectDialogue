@@ -4,6 +4,9 @@ import Connections.ConnectionHandler;
 import Connections.Listener;
 import Messages.Message;
 import Messages.MessageDescriptor;
+import Messages.Query;
+import Messages.QueryDescriptor;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -56,7 +59,7 @@ public abstract class Node implements INode {
 
                 // Don't send QUERY to server
                 if (!connections.getRecipientAddress().equals(this.serverAddress)) {
-                    sendMessage(MessageDescriptor.QUERY, destinationUsername, 3, connections);
+                    sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, destinationUsername).toString(), 3, connections);
                 }
             }
 
@@ -94,7 +97,9 @@ public abstract class Node implements INode {
         connectionHandler.sendMessage(message);
 
         // Register sent message
-        addMessageHistory(getUsernameFromAddress(this.activeConnections, connectionHandler).toString(), message);
+        if (messageDescriptor.equals(MessageDescriptor.MESSAGE)) {
+            addMessageHistory(getUsernameFromAddress(this.activeConnections, connectionHandler).toString(), message);
+        }
     }
 
     private synchronized static <String, ConnectionHandler> Set<String> getUsernameFromAddress(Map<String, ConnectionHandler> map, ConnectionHandler value) {

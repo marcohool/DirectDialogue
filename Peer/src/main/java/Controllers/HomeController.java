@@ -53,6 +53,9 @@ public class HomeController implements Initializable {
     @FXML
     private ListView<String> lv_recent_contacts;
 
+    @FXML
+    private MenuItem mi_active_connections;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
@@ -84,8 +87,7 @@ public class HomeController implements Initializable {
                 // Send message
                 peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
 
-                System.out.println(peer.getName() +" -> " + peer.activeConnections);
-                displayMessage(messageToSend, true);
+                displayMessage(messageToSend, lbl_chat_name.getText(), true);
             }
         });
 
@@ -95,6 +97,7 @@ public class HomeController implements Initializable {
 
         btn_new_convo_back.setOnAction(actionEvent -> toggleNewConvo());
 
+        mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.activeConnections));
     }
 
     public void updateUserSearchLV(String[] users) {
@@ -110,34 +113,46 @@ public class HomeController implements Initializable {
 
         if (messages != null) {
             for (Message message : messages) {
-                displayMessage(message.getMessageContent(), !message.getSourceUsername().equals(username));
+                displayMessage(message, !message.getSourceUsername().equals(username));
             }
         }
     }
 
-    private void displayMessage(String message, boolean sent) {
-        // Display message
-        HBox hBox = new HBox();
-        hBox.setPadding(new Insets(1, 1, 1, 1));
+    public void displayMessage(String message, String chat, boolean sent) {
+        if (chat.equals(lbl_chat_name.getText())) {
 
-        Text text = new Text(message);
-        text.setStyle("-fx-font: 14 Berlin-Sans-FB");
-        TextFlow textFlow = new TextFlow(text);
-        textFlow.setPadding(new Insets(5, 10, 5, 10));
+            // Display message
+            HBox hBox = new HBox();
+            hBox.setPadding(new Insets(1, 1, 1, 1));
 
-        if (sent) {
-            hBox.setAlignment(Pos.CENTER_RIGHT);
-            text.setFill(Color.WHITE);
-            textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
-        } else {
-            hBox.setAlignment(Pos.CENTER_LEFT);
-            textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
+            Text text = new Text(message);
+            text.setStyle("-fx-font: 14 Berlin-Sans-FB");
+            TextFlow textFlow = new TextFlow(text);
+            textFlow.setPadding(new Insets(5, 10, 5, 10));
+
+            if (sent) {
+                hBox.setAlignment(Pos.CENTER_RIGHT);
+                text.setFill(Color.WHITE);
+                textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
+            } else {
+                hBox.setAlignment(Pos.CENTER_LEFT);
+                textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
+            }
+
+            hBox.getChildren().add(textFlow);
+
+            Platform.runLater(
+                    () -> {
+                        vbox_messages.getChildren().add(hBox);
+                        tf_chat_message.clear();
+                    }
+            );
+
         }
+    }
 
-
-        hBox.getChildren().add(textFlow);
-        vbox_messages.getChildren().add(hBox);
-        tf_chat_message.clear();
+    public void displayMessage(Message message, boolean sent) {
+        displayMessage(message.getMessageContent(), message.getSourceUsername(), sent);
     }
 
     private void toggleNewConvo() {

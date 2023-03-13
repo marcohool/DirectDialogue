@@ -54,6 +54,7 @@ public class Server extends Node {
             case SEARCH:
                 if (messageSplit.length > 0) {
                     ArrayList<String> responses = Database.searchUser(message.getMessageContent());
+                    responses.remove(message.getSourceUsername());
                     connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SEARCH, String.join(" ", responses)));
                 }
                 break;
