@@ -99,7 +99,9 @@
    <top>
       <MenuBar BorderPane.alignment="CENTER">
          <Menu mnemonicParsing="false" text="File">
-            <MenuItem fx:id="mi_active_connections" mnemonicParsing="false" text="Display Active Connections"/>
+            <MenuItem fx:id="mi_active_connections" mnemonicParsing="false" text="Display Active Connections" />
+            <MenuItem fx:id="mi_message_queue" mnemonicParsing="false" text="Display Message Queue" />
+            <MenuItem fx:id="mi_own_query_requests" mnemonicParsing="false" text="Display Own Query Requests" />
          </Menu>
       </MenuBar>
    </top>

@@ -13,13 +13,17 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ResourceBundle;
 
 public class HomeController implements Initializable {
@@ -58,6 +62,14 @@ public class HomeController implements Initializable {
     @FXML
     private MenuItem mi_active_connections;
 
+    @FXML
+    private MenuItem mi_message_queue;
+
+    @FXML
+    private MenuItem mi_own_query_requests;
+
+
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
@@ -75,10 +87,7 @@ public class HomeController implements Initializable {
             }
         });
 
-        // Listener for new conversation listview
         lv_new_convo_results.setCellFactory(lv -> setCells());
-
-        // Listener for new conversation listview
         lv_recent_contacts.setCellFactory(lv -> setCells());
 
         tf_chat_message.setOnAction(actionEvent -> {
@@ -90,24 +99,11 @@ public class HomeController implements Initializable {
                 // Add message to message history
                 peer.addMessageHistory(lbl_chat_name.getText(), new StoredMessage(lbl_chat_name.getText(), peer.getName(), messageToSend));
 
-                // Move chat to top of listview
-                ObservableList<String> items = lv_recent_contacts.getItems();
-                int index = lv_recent_contacts.getItems().indexOf(lbl_chat_name.getText());
-
-                if (index > 0) {
-                    String item = items.remove(index);
-                    items.add(0, item);
-                    lv_recent_contacts.scrollTo(0);
-                }
-
-                if (index == -1) {
-                    items.add(0, lbl_chat_name.getText());
-                    lv_recent_contacts.scrollTo(0);
-                }
-
+                updateRecentChats(lbl_chat_name.getText());
 
                 // Display message on GUI
                 displayMessage(messageToSend, lbl_chat_name.getText(), true);
+
             }
         });
 
@@ -116,6 +112,28 @@ public class HomeController implements Initializable {
         btn_new_convo_back.setOnAction(actionEvent -> toggleNewConvo());
 
         mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.activeConnections));
+        mi_message_queue.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getMessageQueue()));
+        mi_own_query_requests.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getOwnQueryRequests()));
+
+
+    }
+
+    public void updateRecentChats(String chatToTop) {
+        // Move chat to top of listview
+        ObservableList<String> items = lv_recent_contacts.getItems();
+        int index = lv_recent_contacts.getItems().indexOf(chatToTop);
+
+        if (index > 0) {
+            String item = items.remove(index);
+            items.add(0, item);
+        }
+
+        if (index == -1) {
+            items.add(0, chatToTop);
+        }
+
+        Platform.runLater(() -> lv_recent_contacts.scrollTo(0));
+
     }
 
     public void updateUserSearchLV(String[] users) {
@@ -131,18 +149,19 @@ public class HomeController implements Initializable {
 
         if (messages != null) {
             for (StoredMessage message : messages) {
-                displayMessage(message, !message.getSourceUsername().equals(peer.getName()));
+                System.out.println(message.getSourceUsername() + " is source");
+                displayMessage(message, message.getSourceUsername().equals(peer.getName()));
             }
         }
     }
 
     public void displayMessage(String message, String chat, boolean sent) {
         if (chat.equals(lbl_chat_name.getText())) {
-
             // Display message
             HBox hBox = new HBox();
             hBox.setPadding(new Insets(1, 1, 1, 1));
 
+            // Set textflows
             Text text = new Text(message);
             text.setStyle("-fx-font: 14 Berlin-Sans-FB");
             TextFlow textFlow = new TextFlow(text);
@@ -163,6 +182,8 @@ public class HomeController implements Initializable {
                     () -> {
                         vbox_messages.getChildren().add(hBox);
                         tf_chat_message.clear();
+                        lv_new_convo_results.setCellFactory(lv -> setCells());
+                        lv_recent_contacts.setCellFactory(lv -> setCells());
                     }
             );
 
@@ -181,7 +202,22 @@ public class HomeController implements Initializable {
                 if (empty) {
                     setText(null);
                 } else {
-                    setText(item);
+                    TextFlow textFlow = new TextFlow();
+                    textFlow.setStyle("-fx-font: 16 Berlin-Sans-FB;");
+
+                    Text username = new Text(item);
+                    username.setStyle("-fx-font-weight: bold;");
+
+                    textFlow.getChildren().add(username);
+
+                    ArrayList<StoredMessage> chatHistory = peer.getChatHistory().get(item);
+                    if (chatHistory != null) {
+                        Text lastMessage = new Text(chatHistory.get(chatHistory.size()-1).getMessageContent());
+                        lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
+                        textFlow.getChildren().add(new Text(System.lineSeparator()));
+                        textFlow.getChildren().add(lastMessage);
+                    }
+                    Platform.runLater(() -> setGraphic(textFlow));
                 }
             }
         };

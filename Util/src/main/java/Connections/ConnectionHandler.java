@@ -59,7 +59,8 @@ public class ConnectionHandler extends Thread {
             // Close socket
             try {
                 this.socket.close();
-                System.out.println("Connection closed with " + this.getRecipientAddress());
+                System.out.println("Connection closed with " + this.getRecipientAddress() + " by " + this.parentNode.getName());
+                System.out.println(parentNode.getName() + " -> " + parentNode.activeConnections);
             } catch (IOException ex) {
                 ex.printStackTrace();
             }
@@ -83,6 +84,10 @@ public class ConnectionHandler extends Thread {
 
     public InetSocketAddress getRecipientAddress() {
         return this.recipientAddress;
+    }
+
+    public Node getParentNode() {
+        return parentNode;
     }
 
 }

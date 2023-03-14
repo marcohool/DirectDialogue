@@ -18,6 +18,8 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Peer extends Nodes.Node {
@@ -75,6 +77,10 @@ public class Peer extends Nodes.Node {
 //        System.out.println(peer6.getName() +" -> " + peer6.activeConnections);
 //        System.out.println(peer7.getName() +" -> " + peer7.activeConnections);
 //
+//        System.out.print("\n" + this.getName() + " (" + this.getAddress() + ") is connected to:");
+//        this.getActiveConnections().forEach((key, value) -> System.out.print(" " + key + " (" + value.getRecipientAddress() + ") | "));
+//        System.out.println();
+//
 //        wait(1);
 //        -----------------------------------------------------------
 
@@ -83,7 +89,7 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public void handleMessage(Message message, ConnectionHandler connectionHandler) {
+    public synchronized void handleMessage(Message message, ConnectionHandler connectionHandler) {
         System.out.println(this.getName() + " RECEIVED MESSAGE : '" + message + "'");
 
         // Only handle message if it has not been received before & ttl > 0
@@ -112,7 +118,9 @@ public class Peer extends Nodes.Node {
                         try {
                             FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("home.fxml"));
                             fxmlLoader.load();
-                            this.homeController.updateUserSearchLV(message.getMessageContent().split(" "));
+                            if (!message.getMessageContent().equals("")) {
+                                this.homeController.updateUserSearchLV(message.getMessageContent().split(" "));
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -122,6 +130,12 @@ public class Peer extends Nodes.Node {
 
             // If message is coming from peer
             else {
+
+                // If this peer needs more connection, send QUERY
+                if (this.activeConnections.size() < minNoOfConnections) {
+                    this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "1").toString(), 1, connectionHandler);
+                }
+
                 switch (message.getMessageDescriptor()) {
                     case PING:
                         // Register connection with user
@@ -135,16 +149,14 @@ public class Peer extends Nodes.Node {
                         // Register connection with user
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
-                        // If this peer needs more connection, send QUERY
-                        if (this.activeConnections.size() < minNoOfConnections) {
-                            this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "1").toString(), 1, connectionHandler);
-                        }
-
                         // Check queue for any messages to be sent to new connection
-                        for (Map.Entry<String, String> queuedMessaged : this.messageQueue.entrySet()) {
+                        for (Map.Entry<String, ConcurrentLinkedQueue<String>> queuedMessaged : this.messageQueue.entrySet()) {
                             // If there is a queued message, send it
                             if (queuedMessaged.getKey().equals(message.getSourceUsername())) {
-                                this.sendMessage(MessageDescriptor.MESSAGE, queuedMessaged.getValue(), 1, queuedMessaged.getKey());
+                                for (String message1 : queuedMessaged.getValue()) {
+                                    this.sendMessage(MessageDescriptor.MESSAGE, message1, 1, queuedMessaged.getKey());
+                                    queuedMessaged.getValue().remove(message1);
+                                }
                             }
                         }
                         break;
@@ -155,10 +167,12 @@ public class Peer extends Nodes.Node {
 
                         // If query is asking for connected peers respond with IPs of X neighbours
                         if (query.getQueryDescriptor().equals(QueryDescriptor.NEIGHBOURHOOD)) {
+
                             String returnedAddresses = getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent()));
                             if (!returnedAddresses.equals("")) {
                                 this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 1, connectionHandler);
                             }
+
                         }
 
                         // If query is looking for username
@@ -166,32 +180,69 @@ public class Peer extends Nodes.Node {
 
                             // If this peer is connected to the user
                             if (this.activeConnections.containsKey(query.getQueryContent())) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, String.valueOf(this.activeConnections.get(query.getQueryContent()).getRecipientAddress()).replace("/", ""), 1, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + String.valueOf(this.activeConnections.get(query.getQueryContent()).getRecipientAddress()).replace("/", ""), 1, connectionHandler);
                             }
 
                             // Else echo message
                             else {
                                 for (ConnectionHandler connection : this.activeConnections.values()) {
-                                    message.decrementTtl();
-                                    connection.sendMessage(message);
+                                    // Don't echo to sender of this message
+                                    if (!connection.equals(connectionHandler)) {
+                                        message.decrementTtl();
+                                        this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), connection);
+
+                                    }
                                 }
+
+                                // Log echo
+                                if (this.receivedQueryRequests.containsKey(message.getSourceUsername())) {
+                                    this.receivedQueryRequests.get(message.getSourceUsername()).add(message.getMessageContent());
+                                } else {
+                                    this.receivedQueryRequests.put(message.getSourceUsername(), new ArrayList<>(Collections.singleton(message.getMessageContent().split(" ")[1])));
+                                }
+
                             }
                         }
                         break;
 
                     case QUERYHIT:
-
-                        // Send PING to all returned IPs
                         for (String ip : message.getMessageContent().split(" ")) {
                             String[] ipSplit = ip.split(":");
-                            this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
+
+                            // If QUERYHIT is simply a returned IP -> ping it
+                            if (ipSplit.length == 2) {
+                                this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
+                                break;
+                            }
+
+                            String returnedUsername = ipSplit[0];
+                            InetSocketAddress returnedIP = new InetSocketAddress(ipSplit[1], Integer.parseInt(ipSplit[2]));
+
+                            // Check query queues
+                            for (Map.Entry<String, ArrayList<String>> entry : this.receivedQueryRequests.entrySet()) {
+                                // If entry contains a query for said user send QUERYHIT
+                                if (entry.getValue().contains(returnedUsername)) {
+                                    this.sendMessage(MessageDescriptor.QUERYHIT, returnedUsername + ":" + returnedIP, 3, entry.getKey());
+                                    entry.getValue().remove(returnedUsername);
+                                }
+                            }
+
+                            // Check own query queue
+                            System.out.println(" ??? " + this.ownQueryRequests);
+                            for (String entry : this.ownQueryRequests) {
+                                if (entry.equals(returnedUsername)) {
+                                    // Ping IP
+                                    this.sendMessage(MessageDescriptor.PING, null, 1, returnedIP);
+                                    this.ownQueryRequests.remove(returnedUsername);
+                                }
+                            }
                         }
                         break;
 
                     case MESSAGE:
+                        this.addMessageHistory(message.getSourceUsername(), new StoredMessage(message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent()));
+                        this.homeController.updateRecentChats(message.getSourceUsername());
                         this.homeController.displayMessage(message.getMessageContent(), message.getSourceUsername(), false);
-                        System.out.println("message all good -> " + message);
-
                 }
             }
         }

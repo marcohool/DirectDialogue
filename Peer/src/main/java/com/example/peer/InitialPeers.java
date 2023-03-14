@@ -30,7 +30,7 @@ public class InitialPeers {
 
     }
 
-    private static ArrayList<Peer> setInitialPeers(InetSocketAddress[] addresses) {
+    public static ArrayList<Peer> setInitialPeers(InetSocketAddress[] addresses) {
         ArrayList<Peer> peers = new ArrayList<>();
 
         // Declare peers

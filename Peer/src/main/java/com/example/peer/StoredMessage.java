@@ -5,14 +5,14 @@ import java.time.LocalDateTime;
 public class StoredMessage {
 
     private final String chatUsername;
-    private final String sourceUsername;
+    private final String sender;
     private final String messageContent;
     private final LocalDateTime currentDateTime;
 
 
-    public StoredMessage(String chatUsername, String sourceUsername, String messageContent) {
+    public StoredMessage(String chatUsername, String sender, String messageContent) {
         this.chatUsername = chatUsername;
-        this.sourceUsername = sourceUsername;
+        this.sender = sender;
         this.messageContent = messageContent;
         this.currentDateTime = LocalDateTime.now();
     }
