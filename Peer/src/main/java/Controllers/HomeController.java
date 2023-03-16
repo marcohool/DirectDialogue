@@ -115,7 +115,9 @@ public class HomeController implements Initializable {
     }
 
     public void setFailedSend(StoredMessage message) {
-
+        if (message.getChatUsername().equals(lbl_chat_name.getText())) {
+            openChat(message.getChatUsername());
+        }
     }
 
     public void updateRecentChats(String chatToTop) {
@@ -141,17 +143,18 @@ public class HomeController implements Initializable {
     }
 
     private void openChat(String username) {
-        tf_chat_message.setVisible(true);
-        lbl_chat_name.setText(username);
-        vbox_messages.getChildren().clear();
+        Platform.runLater(() -> {
+            tf_chat_message.setVisible(true);
+            lbl_chat_name.setText(username);
+            vbox_messages.getChildren().clear();
 
-        ArrayList<StoredMessage> messages = peer.getChatHistory().get(username);
-
-        if (messages != null) {
-            for (StoredMessage message : messages) {
-                displayMessage(message);
+            ArrayList<StoredMessage> messages = peer.getChatHistory().get(username);
+            if (messages != null) {
+                for (StoredMessage message : messages) {
+                    displayMessage(message);
+                }
             }
-        }
+        });
     }
 
     public void displayMessage(StoredMessage message) {
@@ -175,7 +178,14 @@ public class HomeController implements Initializable {
                 hBox.setAlignment(Pos.CENTER_RIGHT);
                 messageText.setFill(Color.WHITE);
                 messageTime.setFill(Color.WHITE);
-                textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
+
+                // If message failed sending
+                if (message.isFailed()) {
+                    textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(255, 59, 47); -fx-cursor: hand");
+                    textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert());
+                } else {
+                    textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
+                }
             } else {
                 hBox.setAlignment(Pos.CENTER_LEFT);
                 textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
@@ -195,9 +205,25 @@ public class HomeController implements Initializable {
         }
     }
 
-//    public void displayMessage(StoredMessage message, boolean sent) {
-//        displayMessage(message.getMessageContent(), message.getDateTime(), message.getChatUsername(), sent);
-//    }
+    private void displayResendAlert() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Send Failed");
+        alert.setHeaderText("This message failed to send");
+        alert.setContentText("Choose an option:");
+
+        ButtonType buttonTypeDelete = new ButtonType("Delete");
+        ButtonType buttonTypeResend = new ButtonType("Resend");
+
+        alert.getButtonTypes().setAll(buttonTypeDelete, buttonTypeResend);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == buttonTypeDelete) {
+                System.out.println("delte");
+            } else if (response == buttonTypeResend) {
+                System.out.println("resend");
+            }
+        });
+    }
 
     private ListCell<String> setCells() {
         ListCell<String> cell = new ListCell<>() {

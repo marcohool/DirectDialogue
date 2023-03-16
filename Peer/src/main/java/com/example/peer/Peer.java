@@ -26,7 +26,7 @@ public class Peer extends Nodes.Node {
     private ActionEvent lastEvent;
     private HomeController homeController;
     private final Object homeControllerLock = new Object();
-    private final int minNoOfConnections = 3;
+    private final int minNoOfConnections = 1;
     private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.68.63", 1926);
 
     private static final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
@@ -151,6 +151,7 @@ public class Peer extends Nodes.Node {
                         // Register connection with user
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
+                        System.out.println(this.messageQueue + " HAHA");
                         // Send any queued messages
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
                         break;
@@ -179,6 +180,7 @@ public class Peer extends Nodes.Node {
 
                             // Else echo message
                             else {
+                                System.out.println(this.getName() + " has connections " + this.activeConnections.values());
                                 for (ConnectionHandler connection : this.activeConnections.values()) {
                                     // Don't echo to sender of this message
                                     if (!connection.equals(connectionHandler)) {
@@ -226,7 +228,6 @@ public class Peer extends Nodes.Node {
                                 if (entry.equals(returnedUsername)) {
                                     // Ping IP
                                     this.sendMessage(MessageDescriptor.PING, null, 1, returnedIP);
-                                    this.messageQueue.remove(returnedUsername);
                                 }
                             }
                         }
@@ -257,6 +258,7 @@ public class Peer extends Nodes.Node {
 
     private void checkQueuedMessages(String username, ConnectionHandler connectionHandler) {
         // Check queue for any messages to be sent to new connection
+        System.out.println("?????????? " + this.messageQueue.entrySet());
         for (Map.Entry<String, ConcurrentLinkedQueue<Message>> queuedMessages : this.messageQueue.entrySet()) {
             // If there is a queued message, send it
             if (queuedMessages.getKey().equals(username)) {
@@ -264,6 +266,7 @@ public class Peer extends Nodes.Node {
                     connectionHandler.sendMessage(message);
 
                     // Remove from queue
+                    System.out.println("removing ?");
                     queuedMessages.getValue().remove(message);
 
                     // Set in history as sent
