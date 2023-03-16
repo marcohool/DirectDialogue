@@ -15,10 +15,9 @@ public class Message {
     private final int sourcePort;
     private final UUID uuid;
     private int ttl;
+    private LocalDateTime dateTime;
     private final MessageDescriptor messageDescriptor;
     private final String messageContent;
-    private final LocalDateTime currentDateTime = LocalDateTime.now();
-
 
     public Message(String message) throws UnknownHostException {
         String[] messageSplit = message.split(" ");
@@ -28,8 +27,9 @@ public class Message {
         this.sourcePort = Integer.parseInt(messageSplit[2]);
         this.uuid = UUID.fromString(messageSplit[3]);
         this.ttl = Integer.parseInt(messageSplit[4]);
-        this.messageDescriptor = MessageDescriptor.valueOf(messageSplit[5]);
-        this.messageContent = String.join(" ", Arrays.copyOfRange(messageSplit, 6, messageSplit.length));
+        this.dateTime = LocalDateTime.parse(messageSplit[5]);
+        this.messageDescriptor = MessageDescriptor.valueOf(messageSplit[6]);
+        this.messageContent = String.join(" ", Arrays.copyOfRange(messageSplit, 7, messageSplit.length));
 
     }
 
@@ -39,13 +39,14 @@ public class Message {
         this.sourcePort = sourcePort;
         this.uuid = UUID.randomUUID();
         this.ttl = ttl;
+        this.dateTime = LocalDateTime.now();
         this.messageDescriptor = messageDescriptor;
         this.messageContent = messageContent;
     }
 
     @Override
     public String toString() {
-        return this.sourceUsername + " " + this.sourceSocketAddress + " " + this.sourcePort + " " + this.uuid + " " + this.ttl + " " + this.messageDescriptor + " " + this.messageContent;
+        return this.sourceUsername + " " + this.sourceSocketAddress + " " + this.sourcePort + " " + this.uuid + " " + this.ttl + " " + this.dateTime + " " + this.messageDescriptor + " " + this.messageContent;
     }
 
     public String getSourceUsername() {
@@ -84,7 +85,11 @@ public class Message {
         return new InetSocketAddress(this.sourceSocketAddress, sourcePort);
     }
 
-    public LocalDateTime getCurrentDateTime() {
-        return currentDateTime;
+    public LocalDateTime getDateTime() {
+        return dateTime;
+    }
+
+    public void setDateTime(LocalDateTime setDateTime) {
+        this.dateTime = setDateTime;
     }
 }

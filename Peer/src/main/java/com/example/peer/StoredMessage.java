@@ -7,18 +7,18 @@ public class StoredMessage {
     private final String chatUsername;
     private final String sender;
     private final String messageContent;
-    private final LocalDateTime currentDateTime;
+    private final LocalDateTime dateTime;
 
 
-    public StoredMessage(String chatUsername, String sender, String messageContent) {
+    public StoredMessage(String chatUsername, String sender, String messageContent, LocalDateTime dateTime) {
         this.chatUsername = chatUsername;
         this.sender = sender;
         this.messageContent = messageContent;
-        this.currentDateTime = LocalDateTime.now();
+        this.dateTime = dateTime;
     }
 
-    public String getSourceUsername() {
-        return chatUsername;
+    public String getSender() {
+        return sender;
     }
 
     public String getMessageContent() {
@@ -29,7 +29,7 @@ public class StoredMessage {
         return chatUsername;
     }
 
-    public LocalDateTime getCurrentDateTime() {
-        return currentDateTime;
+    public LocalDateTime getDateTime() {
+        return dateTime;
     }
 }

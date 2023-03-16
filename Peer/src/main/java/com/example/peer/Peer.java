@@ -27,6 +27,7 @@ public class Peer extends Nodes.Node {
     private final HashMap<String, ArrayList<StoredMessage>> chatHistory = new HashMap<>();
     private ActionEvent lastEvent;
     private HomeController homeController;
+    private final Object homeControllerLock = new Object();
     private final int minNoOfConnections = 3;
     private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.68.63", 1926);
 
@@ -89,7 +90,7 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public synchronized void handleMessage(Message message, ConnectionHandler connectionHandler) {
+    public void handleMessage(Message message, ConnectionHandler connectionHandler) {
         System.out.println(this.getName() + " RECEIVED MESSAGE : '" + message + "'");
 
         // Only handle message if it has not been received before & ttl > 0
@@ -143,22 +144,17 @@ public class Peer extends Nodes.Node {
 
                         // Respond with PONG
                         this.sendMessage(MessageDescriptor.PONG, null, 1, connectionHandler);
+
+                        // Send any queued messages
+                        checkQueuedMessages(message.getSourceUsername(), connectionHandler);
                         break;
 
                     case PONG:
                         // Register connection with user
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
-                        // Check queue for any messages to be sent to new connection
-                        for (Map.Entry<String, ConcurrentLinkedQueue<String>> queuedMessaged : this.messageQueue.entrySet()) {
-                            // If there is a queued message, send it
-                            if (queuedMessaged.getKey().equals(message.getSourceUsername())) {
-                                for (String message1 : queuedMessaged.getValue()) {
-                                    this.sendMessage(MessageDescriptor.MESSAGE, message1, 1, queuedMessaged.getKey());
-                                    queuedMessaged.getValue().remove(message1);
-                                }
-                            }
-                        }
+                        // Send any queued messages
+                        checkQueuedMessages(message.getSourceUsername(), connectionHandler);
                         break;
 
                     case QUERY:
@@ -228,7 +224,6 @@ public class Peer extends Nodes.Node {
                             }
 
                             // Check own query queue
-                            System.out.println(" ??? " + this.ownQueryRequests);
                             for (String entry : this.ownQueryRequests) {
                                 if (entry.equals(returnedUsername)) {
                                     // Ping IP
@@ -240,9 +235,35 @@ public class Peer extends Nodes.Node {
                         break;
 
                     case MESSAGE:
-                        this.addMessageHistory(message.getSourceUsername(), new StoredMessage(message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent()));
+                        this.addMessageHistory(message.getSourceUsername(), new StoredMessage(message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime()));
+
+                        // Wait for homeController to load if it is null
+                        synchronized (homeControllerLock) {
+                            while (homeController == null) {
+                                try {
+                                    homeControllerLock.wait();
+                                } catch (InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                        }
+
                         this.homeController.updateRecentChats(message.getSourceUsername());
-                        this.homeController.displayMessage(message.getMessageContent(), message.getSourceUsername(), false);
+                        this.homeController.displayMessage(message.getMessageContent(), message.getDateTime(), message.getSourceUsername(), false);
+
+                }
+            }
+        }
+    }
+
+    private void checkQueuedMessages(String username, ConnectionHandler connectionHandler) {
+        // Check queue for any messages to be sent to new connection
+        for (Map.Entry<String, ConcurrentLinkedQueue<Message>> queuedMessaged : this.messageQueue.entrySet()) {
+            // If there is a queued message, send it
+            if (queuedMessaged.getKey().equals(username)) {
+                for (Message message : queuedMessaged.getValue()) {
+                    connectionHandler.sendMessage(message);
+                    queuedMessaged.getValue().remove(message);
                 }
             }
         }
@@ -282,7 +303,10 @@ public class Peer extends Nodes.Node {
 
                         // Set peer in scenes controller
                         if (fxmlLoader.getController() instanceof HomeController) {
-                            this.homeController = fxmlLoader.getController();
+                            synchronized (homeControllerLock) {
+                                this.homeController = fxmlLoader.getController();
+                                homeControllerLock.notifyAll();
+                            }
                         }
 
                         // Show stage

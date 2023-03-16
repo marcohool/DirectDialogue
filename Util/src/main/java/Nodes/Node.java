@@ -18,7 +18,7 @@ public abstract class Node implements INode {
     private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     private InetSocketAddress serverAddress;
     public final HashMap<String, ConnectionHandler> activeConnections = new HashMap<>();
-    protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<String>> messageQueue = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
 
     // Store QUERY requests that have been echoed and waiting for QUERYHIT
     protected final HashMap<String, ArrayList<String>> receivedQueryRequests = new HashMap<>();
@@ -62,14 +62,13 @@ public abstract class Node implements INode {
 
             // Add message to queue
             if (this.messageQueue.containsKey(destinationUsername)) {
-                this.messageQueue.get(destinationUsername).add(messageContent);
+                this.messageQueue.get(destinationUsername).add(new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent));
             } else {
-                this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(messageContent)));
+                this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent))));
             }
 
             // Log QUERY
             this.ownQueryRequests.add(destinationUsername);
-            System.out.println("shoot  me " + this.ownQueryRequests);
 
             for (ConnectionHandler connections : this.activeConnections.values()) {
                 // Don't send QUERY to server
@@ -138,6 +137,7 @@ public abstract class Node implements INode {
         return null;
     }
 
+
     public void setName(String name) {
         this.name = name;
     }
@@ -166,7 +166,7 @@ public abstract class Node implements INode {
         return name;
     }
 
-    public ConcurrentHashMap<String, ConcurrentLinkedQueue<String>> getMessageQueue() {
+    public ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> getMessageQueue() {
         return messageQueue;
     }
 

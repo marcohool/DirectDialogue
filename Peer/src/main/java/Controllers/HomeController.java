@@ -22,6 +22,7 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
 import java.net.URL;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.ResourceBundle;
@@ -97,12 +98,12 @@ public class HomeController implements Initializable {
                 peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
 
                 // Add message to message history
-                peer.addMessageHistory(lbl_chat_name.getText(), new StoredMessage(lbl_chat_name.getText(), peer.getName(), messageToSend));
+                peer.addMessageHistory(lbl_chat_name.getText(), new StoredMessage(lbl_chat_name.getText(), peer.getName(), messageToSend, LocalDateTime.now()));
 
                 updateRecentChats(lbl_chat_name.getText());
 
                 // Display message on GUI
-                displayMessage(messageToSend, lbl_chat_name.getText(), true);
+                displayMessage(messageToSend, LocalDateTime.now(), lbl_chat_name.getText(), true);
 
             }
         });
@@ -149,27 +150,31 @@ public class HomeController implements Initializable {
 
         if (messages != null) {
             for (StoredMessage message : messages) {
-                System.out.println(message.getSourceUsername() + " is source");
-                displayMessage(message, message.getSourceUsername().equals(peer.getName()));
+                displayMessage(message, message.getSender().equals(peer.getName()));
             }
         }
     }
 
-    public void displayMessage(String message, String chat, boolean sent) {
+    public void displayMessage(String message, LocalDateTime time, String chat, boolean sent) {
         if (chat.equals(lbl_chat_name.getText())) {
             // Display message
             HBox hBox = new HBox();
-            hBox.setPadding(new Insets(1, 1, 1, 1));
+            hBox.setPadding(new Insets(1, 4, 1, 10));
 
-            // Set textflows
-            Text text = new Text(message);
-            text.setStyle("-fx-font: 14 Berlin-Sans-FB");
-            TextFlow textFlow = new TextFlow(text);
+            // Set TextFlows
+            Text messageText = new Text(message);
+            messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
+            Text messageTime = new Text("   " + time.getHour() + ":" + (time.getMinute() < 10 ? "0" : "") + time.getMinute());
+            messageTime.setStyle("-fx-font: 10 Berlin-Sans-FB;");
+
+            TextFlow textFlow = new TextFlow();
+            textFlow.getChildren().addAll(messageText, messageTime);
             textFlow.setPadding(new Insets(5, 10, 5, 10));
 
             if (sent) {
                 hBox.setAlignment(Pos.CENTER_RIGHT);
-                text.setFill(Color.WHITE);
+                messageText.setFill(Color.WHITE);
+                messageTime.setFill(Color.WHITE);
                 textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
             } else {
                 hBox.setAlignment(Pos.CENTER_LEFT);
@@ -191,7 +196,7 @@ public class HomeController implements Initializable {
     }
 
     public void displayMessage(StoredMessage message, boolean sent) {
-        displayMessage(message.getMessageContent(), message.getSourceUsername(), sent);
+        displayMessage(message.getMessageContent(), message.getDateTime(), message.getChatUsername(), sent);
     }
 
     private ListCell<String> setCells() {
