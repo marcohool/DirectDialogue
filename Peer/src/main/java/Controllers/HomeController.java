@@ -66,11 +66,6 @@ public class HomeController implements Initializable {
     @FXML
     private MenuItem mi_message_queue;
 
-    @FXML
-    private MenuItem mi_own_query_requests;
-
-
-
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
@@ -91,19 +86,21 @@ public class HomeController implements Initializable {
         lv_new_convo_results.setCellFactory(lv -> setCells());
         lv_recent_contacts.setCellFactory(lv -> setCells());
 
+        // Sending messages
         tf_chat_message.setOnAction(actionEvent -> {
             String messageToSend = tf_chat_message.getText();
             if (!messageToSend.isEmpty()) {
                 // Send message
-                peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
+                Message sentMessage = peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
 
                 // Add message to message history
-                peer.addMessageHistory(lbl_chat_name.getText(), new StoredMessage(lbl_chat_name.getText(), peer.getName(), messageToSend, LocalDateTime.now()));
+                StoredMessage storedMessage = new StoredMessage(sentMessage.getUuid(), lbl_chat_name.getText(), peer.getName(), messageToSend, LocalDateTime.now());
+                peer.addChatHistory(lbl_chat_name.getText(), storedMessage);
 
                 updateRecentChats(lbl_chat_name.getText());
 
                 // Display message on GUI
-                displayMessage(messageToSend, LocalDateTime.now(), lbl_chat_name.getText(), true);
+                displayMessage(storedMessage);
 
             }
         });
@@ -114,8 +111,10 @@ public class HomeController implements Initializable {
 
         mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.activeConnections));
         mi_message_queue.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getMessageQueue()));
-        mi_own_query_requests.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getOwnQueryRequests()));
 
+    }
+
+    public void setFailedSend(StoredMessage message) {
 
     }
 
@@ -150,28 +149,29 @@ public class HomeController implements Initializable {
 
         if (messages != null) {
             for (StoredMessage message : messages) {
-                displayMessage(message, message.getSender().equals(peer.getName()));
+                displayMessage(message);
             }
         }
     }
 
-    public void displayMessage(String message, LocalDateTime time, String chat, boolean sent) {
-        if (chat.equals(lbl_chat_name.getText())) {
+    public void displayMessage(StoredMessage message) {
+        if (message.getChatUsername().equals(lbl_chat_name.getText())) {
             // Display message
             HBox hBox = new HBox();
             hBox.setPadding(new Insets(1, 4, 1, 10));
 
             // Set TextFlows
-            Text messageText = new Text(message);
+            Text messageText = new Text(message.getMessageContent());
             messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
-            Text messageTime = new Text("   " + time.getHour() + ":" + (time.getMinute() < 10 ? "0" : "") + time.getMinute());
+            Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
             messageTime.setStyle("-fx-font: 10 Berlin-Sans-FB;");
 
             TextFlow textFlow = new TextFlow();
             textFlow.getChildren().addAll(messageText, messageTime);
             textFlow.setPadding(new Insets(5, 10, 5, 10));
 
-            if (sent) {
+            // If sent or received
+            if (message.getSender().equals(peer.getName())) {
                 hBox.setAlignment(Pos.CENTER_RIGHT);
                 messageText.setFill(Color.WHITE);
                 messageTime.setFill(Color.WHITE);
@@ -195,9 +195,9 @@ public class HomeController implements Initializable {
         }
     }
 
-    public void displayMessage(StoredMessage message, boolean sent) {
-        displayMessage(message.getMessageContent(), message.getDateTime(), message.getChatUsername(), sent);
-    }
+//    public void displayMessage(StoredMessage message, boolean sent) {
+//        displayMessage(message.getMessageContent(), message.getDateTime(), message.getChatUsername(), sent);
+//    }
 
     private ListCell<String> setCells() {
         ListCell<String> cell = new ListCell<>() {

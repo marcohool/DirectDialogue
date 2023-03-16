@@ -18,9 +18,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 public class Peer extends Nodes.Node {
     private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
@@ -224,18 +222,19 @@ public class Peer extends Nodes.Node {
                             }
 
                             // Check own query queue
-                            for (String entry : this.ownQueryRequests) {
+                            for (String entry : this.messageQueue.keySet()) {
                                 if (entry.equals(returnedUsername)) {
                                     // Ping IP
                                     this.sendMessage(MessageDescriptor.PING, null, 1, returnedIP);
-                                    this.ownQueryRequests.remove(returnedUsername);
+                                    this.messageQueue.remove(returnedUsername);
                                 }
                             }
                         }
                         break;
 
                     case MESSAGE:
-                        this.addMessageHistory(message.getSourceUsername(), new StoredMessage(message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime()));
+                        StoredMessage storedMessage = new StoredMessage(message.getUuid(), message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime());
+                        this.addChatHistory(message.getSourceUsername(), storedMessage);
 
                         // Wait for homeController to load if it is null
                         synchronized (homeControllerLock) {
@@ -249,7 +248,7 @@ public class Peer extends Nodes.Node {
                         }
 
                         this.homeController.updateRecentChats(message.getSourceUsername());
-                        this.homeController.displayMessage(message.getMessageContent(), message.getDateTime(), message.getSourceUsername(), false);
+                        this.homeController.displayMessage(storedMessage);
 
                 }
             }
@@ -258,15 +257,25 @@ public class Peer extends Nodes.Node {
 
     private void checkQueuedMessages(String username, ConnectionHandler connectionHandler) {
         // Check queue for any messages to be sent to new connection
-        for (Map.Entry<String, ConcurrentLinkedQueue<Message>> queuedMessaged : this.messageQueue.entrySet()) {
+        for (Map.Entry<String, ConcurrentLinkedQueue<Message>> queuedMessages : this.messageQueue.entrySet()) {
             // If there is a queued message, send it
-            if (queuedMessaged.getKey().equals(username)) {
-                for (Message message : queuedMessaged.getValue()) {
+            if (queuedMessages.getKey().equals(username)) {
+                for (Message message : queuedMessages.getValue()) {
                     connectionHandler.sendMessage(message);
-                    queuedMessaged.getValue().remove(message);
+
+                    // Remove from queue
+                    queuedMessages.getValue().remove(message);
+
+                    // Set in history as sent
+                    for (StoredMessage storedMessage : this.chatHistory.get(username)) {
+                        if (storedMessage.getUuid().equals(message.getUuid())) {
+                            storedMessage.setDelivered(true);
+                        }
+                    }
                 }
             }
         }
+
     }
 
     public HashMap<String, ArrayList<StoredMessage>> getChatHistory() {
@@ -274,12 +283,26 @@ public class Peer extends Nodes.Node {
     }
 
 
-    public void addMessageHistory(String recipient, StoredMessage message) {
+    public void addChatHistory(String recipient, StoredMessage message) {
         if (this.chatHistory.containsKey(recipient)) {
             this.chatHistory.get(recipient).add(message);
         } else {
             this.chatHistory.put(recipient, new ArrayList<>(List.of(message)));
         }
+
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.schedule(() -> this.messageQueue.forEach((username, queuedMessages) -> {
+            if (username.equals(recipient)) {
+                for (Message message1 : queuedMessages) {
+                    if (message1.getUuid().equals(message.getUuid())) {
+                        queuedMessages.remove(message1);
+                        message.setFailed(true);
+                        this.homeController.setFailedSend(message);
+                    }
+                }
+            }
+        }), 5, TimeUnit.SECONDS);
+
     }
 
     public void changeScene(ActionEvent event, String fxmlFile) {

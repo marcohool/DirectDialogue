@@ -10,20 +10,17 @@ import Messages.QueryDescriptor;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public abstract class Node implements INode {
     private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     private InetSocketAddress serverAddress;
-    public final HashMap<String, ConnectionHandler> activeConnections = new HashMap<>();
+    public final ConcurrentHashMap<String, ConnectionHandler> activeConnections = new ConcurrentHashMap<>();
     protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
 
     // Store QUERY requests that have been echoed and waiting for QUERYHIT
     protected final HashMap<String, ArrayList<String>> receivedQueryRequests = new HashMap<>();
-    // Store QUERY requests that originate from this node and waiting for QUERYHIT
-    protected final ConcurrentLinkedQueue<String> ownQueryRequests = new ConcurrentLinkedQueue<>();
 
     protected Message lastReceivedMessage = null;
     private String name;
@@ -52,7 +49,8 @@ public abstract class Node implements INode {
         }
     }
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, String destinationUsername) {
+    public Message sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, String destinationUsername) {
+        Message sentMessage;
 
         // Check if connection with user exists
         ConnectionHandler connection = this.activeConnections.get(destinationUsername);
@@ -61,14 +59,12 @@ public abstract class Node implements INode {
         if (connection == null) {
 
             // Add message to queue
+            sentMessage = new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent);
             if (this.messageQueue.containsKey(destinationUsername)) {
-                this.messageQueue.get(destinationUsername).add(new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent));
+                this.messageQueue.get(destinationUsername).add(sentMessage);
             } else {
-                this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent))));
+                this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(sentMessage)));
             }
-
-            // Log QUERY
-            this.ownQueryRequests.add(destinationUsername);
 
             for (ConnectionHandler connections : this.activeConnections.values()) {
                 // Don't send QUERY to server
@@ -77,11 +73,11 @@ public abstract class Node implements INode {
                 }
             }
 
-
-
         } else {
-            sendMessage(messageDescriptor, messageContent, ttl, connection);
+            sentMessage = sendMessage(messageDescriptor, messageContent, ttl, connection);
         }
+        System.out.println(sentMessage);
+        return sentMessage;
     }
 
     public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, InetSocketAddress destinationAddress) {
@@ -105,12 +101,14 @@ public abstract class Node implements INode {
         }
     }
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, ConnectionHandler connectionHandler) {
+    public Message sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, ConnectionHandler connectionHandler) {
         // Set message details
         Message message = new Message(this.name, this.address.getAddress(), this.address.getPort(), ttl, messageDescriptor, messageContent);
 
         // Send message across the connection
         connectionHandler.sendMessage(message);
+
+        return message;
 
     }
 
@@ -158,7 +156,7 @@ public abstract class Node implements INode {
         return address;
     }
 
-    public HashMap<String, ConnectionHandler> getActiveConnections() {
+    public ConcurrentHashMap<String, ConnectionHandler> getActiveConnections() {
         return activeConnections;
     }
 
@@ -168,9 +166,5 @@ public abstract class Node implements INode {
 
     public ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> getMessageQueue() {
         return messageQueue;
-    }
-
-    public ConcurrentLinkedQueue<String> getOwnQueryRequests() {
-        return ownQueryRequests;
     }
 }
