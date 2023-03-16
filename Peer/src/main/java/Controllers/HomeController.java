@@ -91,17 +91,7 @@ public class HomeController implements Initializable {
             String messageToSend = tf_chat_message.getText();
             if (!messageToSend.isEmpty()) {
                 // Send message
-                Message sentMessage = peer.sendMessage(MessageDescriptor.MESSAGE, tf_chat_message.getText(), 1, lbl_chat_name.getText());
-
-                // Add message to message history
-                StoredMessage storedMessage = new StoredMessage(sentMessage.getUuid(), lbl_chat_name.getText(), peer.getName(), messageToSend, LocalDateTime.now());
-                peer.addChatHistory(lbl_chat_name.getText(), storedMessage);
-
-                updateRecentChats(lbl_chat_name.getText());
-
-                // Display message on GUI
-                displayMessage(storedMessage);
-
+                sendMessage(messageToSend);
             }
         });
 
@@ -157,6 +147,20 @@ public class HomeController implements Initializable {
         });
     }
 
+    private void sendMessage(String messageToSend) {
+        // Send message
+        Message sentMessage = peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, 1, lbl_chat_name.getText());
+
+        // Add message to message history
+        StoredMessage storedMessage = new StoredMessage(sentMessage.getUuid(), lbl_chat_name.getText(), peer.getName(), messageToSend, LocalDateTime.now());
+        peer.addChatHistory(lbl_chat_name.getText(), storedMessage);
+
+        updateRecentChats(lbl_chat_name.getText());
+
+        // Display message on GUI
+        displayMessage(storedMessage);
+    }
+
     public void displayMessage(StoredMessage message) {
         if (message.getChatUsername().equals(lbl_chat_name.getText())) {
             // Display message
@@ -182,7 +186,7 @@ public class HomeController implements Initializable {
                 // If message failed sending
                 if (message.isFailed()) {
                     textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(255, 59, 47); -fx-cursor: hand");
-                    textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert());
+                    textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert(message));
                 } else {
                     textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
                 }
@@ -205,7 +209,7 @@ public class HomeController implements Initializable {
         }
     }
 
-    private void displayResendAlert() {
+    private void displayResendAlert(StoredMessage message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Send Failed");
         alert.setHeaderText("This message failed to send");
@@ -218,9 +222,12 @@ public class HomeController implements Initializable {
 
         alert.showAndWait().ifPresent(response -> {
             if (response == buttonTypeDelete) {
-                System.out.println("delte");
+                peer.getChatHistory().get(lbl_chat_name.getText()).remove(message);
+                openChat(lbl_chat_name.getText());
             } else if (response == buttonTypeResend) {
-                System.out.println("resend");
+                sendMessage(message.getMessageContent());
+                peer.getChatHistory().get(lbl_chat_name.getText()).remove(message);
+                openChat(lbl_chat_name.getText());
             }
         });
     }

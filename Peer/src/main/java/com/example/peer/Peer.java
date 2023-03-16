@@ -151,7 +151,6 @@ public class Peer extends Nodes.Node {
                         // Register connection with user
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
-                        System.out.println(this.messageQueue + " HAHA");
                         // Send any queued messages
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
                         break;
@@ -165,7 +164,7 @@ public class Peer extends Nodes.Node {
 
                             String returnedAddresses = getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent()));
                             if (!returnedAddresses.equals("")) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 1, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 3, connectionHandler);
                             }
 
                         }
@@ -175,7 +174,7 @@ public class Peer extends Nodes.Node {
 
                             // If this peer is connected to the user
                             if (this.activeConnections.containsKey(query.getQueryContent())) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + String.valueOf(this.activeConnections.get(query.getQueryContent()).getRecipientAddress()).replace("/", ""), 1, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + this.activeConnections.get(query.getQueryContent()).getRecipientAddress(), 1, connectionHandler);
                             }
 
                             // Else echo message
@@ -184,7 +183,6 @@ public class Peer extends Nodes.Node {
                                 for (ConnectionHandler connection : this.activeConnections.values()) {
                                     // Don't echo to sender of this message
                                     if (!connection.equals(connectionHandler)) {
-                                        message.decrementTtl();
                                         this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), connection);
 
                                     }
@@ -212,7 +210,7 @@ public class Peer extends Nodes.Node {
                             }
 
                             String returnedUsername = ipSplit[0];
-                            InetSocketAddress returnedIP = new InetSocketAddress(ipSplit[1], Integer.parseInt(ipSplit[2]));
+                            InetSocketAddress returnedIP = new InetSocketAddress(ipSplit[1].replace("/", ""), Integer.parseInt(ipSplit[2]));
 
                             // Check query queues
                             for (Map.Entry<String, ArrayList<String>> entry : this.receivedQueryRequests.entrySet()) {
@@ -235,6 +233,7 @@ public class Peer extends Nodes.Node {
 
                     case MESSAGE:
                         StoredMessage storedMessage = new StoredMessage(message.getUuid(), message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime());
+                        storedMessage.setDelivered(true);
                         this.addChatHistory(message.getSourceUsername(), storedMessage);
 
                         // Wait for homeController to load if it is null
@@ -258,7 +257,6 @@ public class Peer extends Nodes.Node {
 
     private void checkQueuedMessages(String username, ConnectionHandler connectionHandler) {
         // Check queue for any messages to be sent to new connection
-        System.out.println("?????????? " + this.messageQueue.entrySet());
         for (Map.Entry<String, ConcurrentLinkedQueue<Message>> queuedMessages : this.messageQueue.entrySet()) {
             // If there is a queued message, send it
             if (queuedMessages.getKey().equals(username)) {
@@ -266,7 +264,6 @@ public class Peer extends Nodes.Node {
                     connectionHandler.sendMessage(message);
 
                     // Remove from queue
-                    System.out.println("removing ?");
                     queuedMessages.getValue().remove(message);
 
                     // Set in history as sent

@@ -83,6 +83,7 @@ public abstract class Node implements INode {
     }
 
     public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, InetSocketAddress destinationAddress) {
+
         try {
             // Check if there is an existing connection with recipient
             ConnectionHandler connection = searchForEstablishedConnection(destinationAddress);
