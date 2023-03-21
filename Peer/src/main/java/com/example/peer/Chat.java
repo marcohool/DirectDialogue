@@ -1,17 +1,18 @@
 package com.example.peer;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.UUID;
 
 public class Chat {
 
     private final String chatName;
-    private final ArrayList<String> chatParticipants;
+    private final Set<String> chatParticipants;
     private final ArrayList<StoredMessage> messageHistory;
     private final UUID chatUUID;
 
-    public Chat(String chatName, ArrayList<String> chatParticipants) {
-        this.chatName = chatName;
+    public Chat(Set<String> chatParticipants) {
+        this.chatName = String.join(", ", chatParticipants);
         this.chatParticipants = chatParticipants;
         this.chatUUID = UUID.randomUUID();
         this.messageHistory = new ArrayList<>();
@@ -21,7 +22,7 @@ public class Chat {
         return chatName;
     }
 
-    public ArrayList<String> getChatParticipants() {
+    public Set<String> getChatParticipants() {
         return chatParticipants;
     }
 

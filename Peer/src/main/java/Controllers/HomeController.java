@@ -19,7 +19,9 @@ import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -74,6 +76,9 @@ public class HomeController implements Initializable {
 
     @FXML
     private ImageView iv_group;
+
+    @FXML
+    private VBox vbox_activity_status;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -131,9 +136,7 @@ public class HomeController implements Initializable {
     }
 
     public void setFailedSend(StoredMessage message) {
-        if (message.getChatUsername().equals(lbl_chat_name.getText())) {
-            openChat(message.getChatUsername());
-        }
+        refreshChat(message.getChatUsername());
     }
 
     public void updateRecentChats(String chatToTop) {
@@ -162,8 +165,9 @@ public class HomeController implements Initializable {
         Platform.runLater(() -> {
             tf_chat_message.setVisible(true);
             lbl_chat_name.setText(username);
-            vbox_messages.getChildren().clear();
+            setActivity(username);
 
+            vbox_messages.getChildren().clear();
             Chat chat = peer.getActiveChat(username);
             if (chat != null) {
                 for (StoredMessage message : chat.getMessageHistory()) {
@@ -171,6 +175,40 @@ public class HomeController implements Initializable {
                 }
             }
         });
+    }
+
+    public void setActivity(String username) {
+        Platform.runLater(() -> {
+            if (lbl_chat_name.getText().equals(username)) {
+                vbox_activity_status.getChildren().clear();
+
+                TextFlow activityStatus = new TextFlow();
+                activityStatus.setTextAlignment(TextAlignment.RIGHT);
+                activityStatus.setPadding(new Insets(0, 20, 0, 0));
+
+                Text activityText = new Text();
+                Circle circle = new Circle(6);
+
+                if (peer.getActiveConnections().containsKey(username)) {
+                    activityText.setText("Online  ");
+                    circle.setFill(Color.GREEN);
+                } else {
+                    activityText.setText("Status Unknown  ");
+                    circle.setFill(Color.GREY);
+                }
+
+                activityStatus.getChildren().add(activityText);
+                activityStatus.getChildren().add(circle);
+                vbox_activity_status.getChildren().add(activityStatus);
+            }
+        });
+
+    }
+
+    public void refreshChat(String username) {
+        if (lbl_chat_name.getText().equals(username)) {
+            openChat(lbl_chat_name.getText());
+        }
     }
 
     private void sendMessage(String messageToSend) {

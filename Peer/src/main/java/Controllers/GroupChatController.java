@@ -45,7 +45,11 @@ public class GroupChatController implements Initializable {
         }));
 
         btn_create_group.setOnAction(event -> {
-            System.out.println(selectedUsers);
+            if (selectedUsers.size() <= 1) {
+                peer.displayAlert("Please select 2 or more contacts");
+            } else {
+                peer.createGroup(peerContacts);
+            }
         });
 
 

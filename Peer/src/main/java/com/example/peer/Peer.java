@@ -152,6 +152,11 @@ public class Peer extends Nodes.Node {
 
                         // Send any queued messages
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
+
+                        if (homeController != null) {
+                            homeController.setActivity(message.getSourceUsername());
+                        }
+
                         break;
 
                     case QUERY:
@@ -273,12 +278,6 @@ public class Peer extends Nodes.Node {
                             }
                         }
                     }
-
-//                    for (StoredMessage storedMessage : this.activeChats.get(username)) {
-//                        if (storedMessage.getUuid().equals(message.getUuid())) {
-//                            storedMessage.setDelivered(true);
-//                        }
-//                    }
                 }
             }
         }
@@ -309,7 +308,7 @@ public class Peer extends Nodes.Node {
         }
 
         if (!chatExists) {
-            Chat newChat = new Chat(chatName, new ArrayList<>(Collections.singleton(chatName)));
+            Chat newChat = new Chat(new HashSet<>(Collections.singleton(chatName)));
             newChat.addMessageHistory(message);
             this.activeChats.add(newChat);
         }
@@ -325,8 +324,12 @@ public class Peer extends Nodes.Node {
                     }
                 }
             }
-        }), 5, TimeUnit.SECONDS);
+        }), 10, TimeUnit.SECONDS);
 
+    }
+
+    public void createGroup(Set<String> participants) {
+        Chat chat = new Chat(participants);
     }
 
     public void changeScene(ActionEvent event, String fxmlFile) {
