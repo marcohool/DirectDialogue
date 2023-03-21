@@ -14,7 +14,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -22,7 +21,7 @@ import java.util.concurrent.*;
 
 public class Peer extends Nodes.Node {
     private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
-    private final HashMap<String, ArrayList<StoredMessage>> chatHistory = new HashMap<>();
+    private final ArrayList<Chat> activeChats = new ArrayList<>();
     private ActionEvent lastEvent;
     private HomeController homeController;
     private final Object homeControllerLock = new Object();
@@ -267,32 +266,57 @@ public class Peer extends Nodes.Node {
                     queuedMessages.getValue().remove(message);
 
                     // Set in history as sent
-                    for (StoredMessage storedMessage : this.chatHistory.get(username)) {
-                        if (storedMessage.getUuid().equals(message.getUuid())) {
-                            storedMessage.setDelivered(true);
+                    for (Chat chat : this.activeChats) {
+                        if (chat.getChatName().equals(username)) {
+                            for (StoredMessage storedMessage : chat.getMessageHistory()) {
+                                storedMessage.setDelivered(true);
+                            }
                         }
                     }
+
+//                    for (StoredMessage storedMessage : this.activeChats.get(username)) {
+//                        if (storedMessage.getUuid().equals(message.getUuid())) {
+//                            storedMessage.setDelivered(true);
+//                        }
+//                    }
                 }
             }
         }
 
     }
 
-    public HashMap<String, ArrayList<StoredMessage>> getChatHistory() {
-        return chatHistory;
+    public Chat getActiveChat(String chatName) {
+        for (Chat chat : this.activeChats) {
+            if (chat.getChatName().equals(chatName)) {
+                return chat;
+            }
+        }
+        return null;
     }
 
+    public ArrayList<Chat> getActiveChats() {
+        return activeChats;
+    }
 
-    public void addChatHistory(String recipient, StoredMessage message) {
-        if (this.chatHistory.containsKey(recipient)) {
-            this.chatHistory.get(recipient).add(message);
-        } else {
-            this.chatHistory.put(recipient, new ArrayList<>(List.of(message)));
+    public void addChatHistory(String chatName, StoredMessage message) {
+        boolean chatExists = false;
+
+        for (Chat activeChat : this.activeChats) {
+            if (activeChat.getChatName().equals(chatName) || activeChat.getChatUUID().toString().equals(chatName)) {
+                activeChat.addMessageHistory(message);
+                chatExists = true;
+            }
+        }
+
+        if (!chatExists) {
+            Chat newChat = new Chat(chatName, new ArrayList<>(Collections.singleton(chatName)));
+            newChat.addMessageHistory(message);
+            this.activeChats.add(newChat);
         }
 
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.schedule(() -> this.messageQueue.forEach((username, queuedMessages) -> {
-            if (username.equals(recipient)) {
+            if (username.equals(chatName)) {
                 for (Message message1 : queuedMessages) {
                     if (message1.getUuid().equals(message.getUuid())) {
                         queuedMessages.remove(message1);

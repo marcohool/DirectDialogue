@@ -2,6 +2,7 @@ package Controllers;
 
 import Messages.Message;
 import Messages.MessageDescriptor;
+import com.example.peer.Chat;
 import com.example.peer.Peer;
 import com.example.peer.PeerUI;
 import com.example.peer.StoredMessage;
@@ -9,22 +10,24 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.SVGPath;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.ResourceBundle;
 
 public class HomeController implements Initializable {
@@ -46,6 +49,9 @@ public class HomeController implements Initializable {
     private Button btn_new_convo;
 
     @FXML
+    private Button btn_new_group;
+
+    @FXML
     private Button btn_new_convo_back;
 
     @FXML
@@ -65,6 +71,9 @@ public class HomeController implements Initializable {
 
     @FXML
     private MenuItem mi_message_queue;
+
+    @FXML
+    private ImageView iv_group;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -95,8 +104,25 @@ public class HomeController implements Initializable {
             }
         });
 
-        btn_new_convo.setOnAction(actionEvent -> toggleNewConvo());
+        // New group chat
+        btn_new_group.setOnAction(actionEvent -> {
+            try {
+                FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("choose_members.fxml"));
+                Scene scene = new Scene(fxmlLoader.load(), 418, 400);
+                Stage popupStage = new Stage();
+                popupStage.initModality(Modality.APPLICATION_MODAL);
 
+                popupStage.setScene(scene);
+                popupStage.showAndWait();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+
+        });
+
+        btn_new_convo.setOnAction(actionEvent -> toggleNewConvo());
         btn_new_convo_back.setOnAction(actionEvent -> toggleNewConvo());
 
         mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.activeConnections));
@@ -138,9 +164,9 @@ public class HomeController implements Initializable {
             lbl_chat_name.setText(username);
             vbox_messages.getChildren().clear();
 
-            ArrayList<StoredMessage> messages = peer.getChatHistory().get(username);
-            if (messages != null) {
-                for (StoredMessage message : messages) {
+            Chat chat = peer.getActiveChat(username);
+            if (chat != null) {
+                for (StoredMessage message : chat.getMessageHistory()) {
                     displayMessage(message);
                 }
             }
@@ -222,11 +248,11 @@ public class HomeController implements Initializable {
 
         alert.showAndWait().ifPresent(response -> {
             if (response == buttonTypeDelete) {
-                peer.getChatHistory().get(lbl_chat_name.getText()).remove(message);
+                peer.getActiveChat(lbl_chat_name.getText()).getMessageHistory().remove(message);
                 openChat(lbl_chat_name.getText());
             } else if (response == buttonTypeResend) {
                 sendMessage(message.getMessageContent());
-                peer.getChatHistory().get(lbl_chat_name.getText()).remove(message);
+                peer.getActiveChat(lbl_chat_name.getText()).getMessageHistory().remove(message);
                 openChat(lbl_chat_name.getText());
             }
         });
@@ -245,16 +271,17 @@ public class HomeController implements Initializable {
 
                     Text username = new Text(item);
                     username.setStyle("-fx-font-weight: bold;");
-
                     textFlow.getChildren().add(username);
 
-                    ArrayList<StoredMessage> chatHistory = peer.getChatHistory().get(item);
-                    if (chatHistory != null) {
+                    Chat chat = peer.getActiveChat(item);
+                    if (chat != null) {
+                        ArrayList<StoredMessage> chatHistory = chat.getMessageHistory();
                         Text lastMessage = new Text(chatHistory.get(chatHistory.size()-1).getMessageContent());
                         lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
                         textFlow.getChildren().add(new Text(System.lineSeparator()));
                         textFlow.getChildren().add(lastMessage);
                     }
+
                     Platform.runLater(() -> setGraphic(textFlow));
                 }
             }
@@ -276,9 +303,11 @@ public class HomeController implements Initializable {
             btn_new_convo.setVisible(true);
             lbl_new_convo.setVisible(false);
             btn_new_convo_back.setVisible(false);
+            btn_new_group.setVisible(false);
             lv_new_convo_results.setVisible(false);
             lv_new_convo_results.getItems().clear();
             lv_recent_contacts.setVisible(true);
+            iv_group.setVisible(false);
             tf_searchbar.setPromptText("Search");
             tf_searchbar.clear();
         } else {
@@ -286,8 +315,10 @@ public class HomeController implements Initializable {
             btn_new_convo_back.setVisible(true);
             lv_recent_contacts.setVisible(false);
             lv_new_convo_results.setVisible(true);
+            iv_group.setVisible(true);
             tf_searchbar.setPromptText("Search by username");
             btn_new_convo.setVisible(false);
+            btn_new_group.setVisible(true);
             tf_searchbar.clear();
         }
     }

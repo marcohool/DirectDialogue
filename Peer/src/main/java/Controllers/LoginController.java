@@ -8,6 +8,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.image.ImageView;
 
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -39,6 +40,8 @@ public class LoginController implements Initializable {
             peer.setLastEvent(actionEvent);
             peer.sendMessage(MessageDescriptor.LOGIN, tf_username.getText() + " " + pf_password.getText(), 1, peer.getServerAddress());
         });
+
+
 
     }
 

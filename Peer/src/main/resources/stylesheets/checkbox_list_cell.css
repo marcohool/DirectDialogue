@@ -1,0 +1,49 @@
+.list-view {
+    -fx-background-color:  #f8f8f8;
+    -fx-padding: 0 15 0 15;
+    -fx-border-width: 0 0 0 0;
+    -fx-focus-color: transparent;
+}
+
+.list-view .list-cell {
+    -fx-background-color:  #f8f8f8;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-pref-height: 60;
+    -fx-padding: 15 15 15 15;
+    -fx-font-size: 15;
+}
+
+.button {
+    -fx-cursor: hand;
+}
+
+.button:hover {
+    -fx-background-color: #e5e5e5;
+}
+
+.check-box {
+    -fx-padding: 0 10 0 0;
+    -fx-cursor: hand;
+
+}
+
+.check-box > .box {
+    -fx-background-color: #ddd;
+    -fx-background-radius: 2px;
+}
+
+.check-box > .box > .mark {
+    -fx-background-color: #555;
+    -fx-opacity: 0;
+
+}
+
+.check-box:selected > .box {
+    -fx-background-color: #4CAF50;
+}
+
+.check-box:selected > .box > .mark {
+    -fx-background-color: #fff;
+    -fx-opacity: 1;
+}

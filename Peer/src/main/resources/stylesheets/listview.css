@@ -29,3 +29,18 @@
     -fx-opacity: 0;
     -fx-cursor: default;
 }
+
+.button {
+    -fx-background-color:  #f8f8f8;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+    -fx-pref-height: 60;
+    -fx-padding: 15 15 15 60;
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-font-family: Arial;
+}
+
+.button:hover {
+    -fx-background-color: #e5e5e5;
+}

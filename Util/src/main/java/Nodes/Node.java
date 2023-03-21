@@ -63,9 +63,7 @@ public abstract class Node implements INode {
             if (this.messageQueue.containsKey(destinationUsername)) {
                 this.messageQueue.get(destinationUsername).add(sentMessage);
             } else {
-                System.out.println("adding to queue");
                 this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(sentMessage)));
-                System.out.println("added -> " + this.messageQueue);
             }
 
             for (ConnectionHandler connections : this.activeConnections.values()) {
