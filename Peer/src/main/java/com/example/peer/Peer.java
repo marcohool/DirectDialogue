@@ -16,6 +16,7 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -99,6 +100,7 @@ public class Peer extends Nodes.Node {
             if (new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort()).equals(this.serverAddress)) {
                 switch (message.getMessageDescriptor()) {
                     case LOGIN_SUCCESS:
+                    case SIGNUP_SUCCESS:
                         this.setName(message.getMessageContent());
                         pingRandomInitialPeer();
                         changeScene(this.lastEvent, "home.fxml");
@@ -144,6 +146,10 @@ public class Peer extends Nodes.Node {
 
                         // Send any queued messages
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
+
+                        if (homeController != null) {
+                            homeController.setActivity(message.getSourceUsername());
+                        }
                         break;
 
                     case PONG:
@@ -330,6 +336,9 @@ public class Peer extends Nodes.Node {
 
     public void createGroup(Set<String> participants) {
         Chat chat = new Chat(participants);
+        chat.addMessageHistory(new StoredMessage(null, chat.getChatName(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
+        this.activeChats.add(chat);
+        this.homeController.updateRecentChats(chat.getChatName());
     }
 
     public void changeScene(ActionEvent event, String fxmlFile) {

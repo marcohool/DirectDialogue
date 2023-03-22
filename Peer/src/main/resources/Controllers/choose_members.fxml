@@ -7,23 +7,18 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-      prefWidth="418.0" style="-fx-background-color: #f8f8f8;" stylesheets="@../stylesheets/checkbox_list_cell.css"
-      xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="Controllers.GroupChatController">
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="418.0" style="-fx-background-color: #f8f8f8;" stylesheets="@../stylesheets/checkbox_list_cell.css" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controllers.GroupChatController">
    <HBox alignment="CENTER" prefHeight="88.0" prefWidth="418.0">
       <Label text="Choose Members">
          <font>
-            <Font name="Arial" size="20.0"/>
+            <Font name="Arial" size="20.0" />
          </font>
       </Label>
    </HBox>
    <HBox prefHeight="220.0" prefWidth="418.0" VBox.vgrow="ALWAYS">
-      <ListView fx:id="lv_contacts" focusTraversable="false" prefHeight="194.0" prefWidth="418.0"
-                HBox.hgrow="ALWAYS"/>
+      <ListView fx:id="lv_contacts" focusTraversable="false" prefHeight="194.0" prefWidth="418.0" HBox.hgrow="ALWAYS" />
    </HBox>
    <HBox alignment="CENTER" prefHeight="61.0" prefWidth="418.0">
-      <Button fx:id="btn_create_group" mnemonicParsing="false"
-              style="-fx-background-color: #e9e9e9; -fx-border-radius: 10;" text="Create Group"/>
+      <Button fx:id="btn_create_group" mnemonicParsing="false" style="-fx-background-color: #e9e9e9; -fx-border-radius: 10;" text="Create Group" />
    </HBox>
 </VBox>

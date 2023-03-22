@@ -10,6 +10,8 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.cell.CheckBoxListCell;
+import javafx.stage.Stage;
+
 import java.net.URL;
 import java.util.*;
 
@@ -49,6 +51,8 @@ public class GroupChatController implements Initializable {
                 peer.displayAlert("Please select 2 or more contacts");
             } else {
                 peer.createGroup(peerContacts);
+                Stage stage = (Stage) btn_create_group.getScene().getWindow();
+                stage.close();
             }
         });
 

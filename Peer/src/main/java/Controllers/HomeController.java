@@ -119,6 +119,7 @@ public class HomeController implements Initializable {
 
                 popupStage.setScene(scene);
                 popupStage.showAndWait();
+                toggleNewConvo();
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -235,30 +236,36 @@ public class HomeController implements Initializable {
             Text messageText = new Text(message.getMessageContent());
             messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
             Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
-            messageTime.setStyle("-fx-font: 10 Berlin-Sans-FB;");
 
             TextFlow textFlow = new TextFlow();
-            textFlow.getChildren().addAll(messageText, messageTime);
             textFlow.setPadding(new Insets(5, 10, 5, 10));
 
             // If sent or received
-            if (message.getSender().equals(peer.getName())) {
-                hBox.setAlignment(Pos.CENTER_RIGHT);
-                messageText.setFill(Color.WHITE);
-                messageTime.setFill(Color.WHITE);
-
-                // If message failed sending
-                if (message.isFailed()) {
-                    textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(255, 59, 47); -fx-cursor: hand");
-                    textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert(message));
-                } else {
-                    textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
-                }
+            if (message.getSender().equals("SYSTEM")) {
+                hBox.setAlignment(Pos.CENTER);
+                messageText.setStyle("-fx-text-fill: rgb(134,134,134);");
+                messageTime.setStyle("-fx-font: 11 Berlin-Sans-FB;");
             } else {
-                hBox.setAlignment(Pos.CENTER_LEFT);
-                textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
+                messageTime.setStyle("-fx-font: 10 Berlin-Sans-FB;");
+                if (message.getSender().equals(peer.getName())) {
+                    hBox.setAlignment(Pos.CENTER_RIGHT);
+                    messageText.setFill(Color.WHITE);
+                    messageTime.setFill(Color.WHITE);
+
+                    // If message failed sending
+                    if (message.isFailed()) {
+                        textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(255, 59, 47); -fx-cursor: hand");
+                        textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert(message));
+                    } else {
+                        textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
+                    }
+                } else {
+                    hBox.setAlignment(Pos.CENTER_LEFT);
+                    textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
+                }
             }
 
+            textFlow.getChildren().addAll(messageText, messageTime);
             hBox.getChildren().add(textFlow);
 
             Platform.runLater(
@@ -314,10 +321,12 @@ public class HomeController implements Initializable {
                     Chat chat = peer.getActiveChat(item);
                     if (chat != null) {
                         ArrayList<StoredMessage> chatHistory = chat.getMessageHistory();
-                        Text lastMessage = new Text(chatHistory.get(chatHistory.size()-1).getMessageContent());
-                        lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
-                        textFlow.getChildren().add(new Text(System.lineSeparator()));
-                        textFlow.getChildren().add(lastMessage);
+                        if (chatHistory.size() > 0) {
+                            Text lastMessage = new Text(chatHistory.get(chatHistory.size() - 1).getMessageContent());
+                            lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
+                            textFlow.getChildren().add(new Text(System.lineSeparator()));
+                            textFlow.getChildren().add(lastMessage);
+                        }
                     }
 
                     Platform.runLater(() -> setGraphic(textFlow));

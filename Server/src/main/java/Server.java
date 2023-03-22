@@ -44,7 +44,7 @@ public class Server extends Node {
                 } else {
                     String response = Database.registerUser(messageSplit[0], messageSplit[1]);
                     if (response.equals("success")) {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_SUCCESS, null));
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_SUCCESS, messageSplit[0]));
                     } else {
                         connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_ERROR, response));
                     }

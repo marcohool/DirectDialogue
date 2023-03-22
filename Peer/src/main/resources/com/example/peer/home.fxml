@@ -84,10 +84,10 @@
             <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
                <Label fx:id="lbl_chat_name">
                   <padding>
-                     <Insets left="30.0"/>
+                     <Insets left="30.0" />
                   </padding>
                   <font>
-                     <Font name="Berlin Sans FB" size="25.0"/>
+                     <Font name="Berlin Sans FB" size="25.0" />
                   </font>
                </Label>
             </VBox>
