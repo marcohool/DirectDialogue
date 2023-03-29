@@ -43,7 +43,7 @@ public class SignupController implements Initializable {
             if (tf_username.getText().equals("") || pf_password.getText().equals("")) {
                 peer.displayAlert("Please enter a username & password");
             } else {
-                peer.sendMessage(MessageDescriptor.SIGNUP, tf_username.getText() + " " + pf_password.getText(), 1, peer.getServerAddress());
+                peer.sendMessage(MessageDescriptor.SIGNUP, tf_username.getText() + " " + pf_password.getText(), 1, null, null, peer.getServerAddress());
             }
         });
 

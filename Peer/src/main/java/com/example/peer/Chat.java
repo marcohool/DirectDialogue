@@ -14,7 +14,7 @@ public class Chat {
     public Chat(Set<String> chatParticipants) {
         this.chatName = String.join(", ", chatParticipants);
         this.chatParticipants = chatParticipants;
-        this.chatUUID = UUID.randomUUID();
+        this.chatUUID = null;
         this.messageHistory = new ArrayList<>();
     }
 

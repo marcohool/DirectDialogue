@@ -2,11 +2,9 @@ import Connections.ConnectionHandler;
 import Messages.Message;
 import Messages.MessageDescriptor;
 import Nodes.Node;
-
 import java.net.InetSocketAddress;
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class Server extends Node {
 
@@ -28,25 +26,25 @@ public class Server extends Node {
         switch (message.getMessageDescriptor()) {
             case LOGIN:
                 if (messageSplit.length < 2) {
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_ERROR, "error Please enter a valid username & password"));
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.LOGIN_ERROR, "error Please enter a valid username & password"));
                 } else {
                     MessageDescriptor response = Database.loginUser(messageSplit[0], messageSplit[1]);
                     if (response.equals(MessageDescriptor.LOGIN_SUCCESS)) {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_SUCCESS, messageSplit[0]));
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.LOGIN_SUCCESS, messageSplit[0]));
                     } else {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.LOGIN_ERROR, null));
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(),null, null, 1, MessageDescriptor.LOGIN_ERROR, null));
                     }
                 }
                 break;
             case SIGNUP:
                 if (messageSplit.length < 2) {
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_ERROR, "No username/password"));
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_ERROR, "No username/password"));
                 } else {
                     String response = Database.registerUser(messageSplit[0], messageSplit[1]);
                     if (response.equals("success")) {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_SUCCESS, messageSplit[0]));
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_SUCCESS, messageSplit[0]));
                     } else {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SIGNUP_ERROR, response));
+                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_ERROR, response));
                     }
                 }
                 break;
@@ -55,7 +53,7 @@ public class Server extends Node {
                 if (messageSplit.length > 0) {
                     ArrayList<String> responses = Database.searchUser(message.getMessageContent());
                     responses.remove(message.getSourceUsername());
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), 1, MessageDescriptor.SEARCH, String.join(" ", responses)));
+                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SEARCH, String.join(" ", responses)));
                 }
                 break;
         }

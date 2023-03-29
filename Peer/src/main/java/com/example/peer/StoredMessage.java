@@ -6,16 +6,16 @@ import java.util.UUID;
 public class StoredMessage {
 
     private final UUID uuid;
-    private final String chatUsername;
+    private final UUID chatUUID;
     private final String sender;
     private final String messageContent;
     private final LocalDateTime dateTime;
     private boolean delivered;
     private boolean failed;
 
-    public StoredMessage(UUID uuid, String chatUsername, String sender, String messageContent, LocalDateTime dateTime) {
+    public StoredMessage(UUID uuid, UUID chatUUID, String sender, String messageContent, LocalDateTime dateTime) {
         this.uuid = uuid;
-        this.chatUsername = chatUsername;
+        this.chatUUID = chatUUID;
         this.sender = sender;
         this.messageContent = messageContent;
         this.dateTime = dateTime;
@@ -31,12 +31,12 @@ public class StoredMessage {
         return messageContent;
     }
 
-    public String getChatUsername() {
-        return chatUsername;
-    }
-
     public LocalDateTime getDateTime() {
         return dateTime;
+    }
+
+    public UUID getChatUUID() {
+        return chatUUID;
     }
 
     public boolean isDelivered() {

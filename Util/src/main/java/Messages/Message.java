@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.UUID;
 
 public class Message {
@@ -14,6 +15,7 @@ public class Message {
     private final InetAddress sourceSocketAddress;
     private final int sourcePort;
     private final UUID uuid;
+    private final UUID chatUUID;
     private int ttl;
     private LocalDateTime dateTime;
     private final MessageDescriptor messageDescriptor;
@@ -26,18 +28,24 @@ public class Message {
         this.sourceSocketAddress = InetAddress.getByName(messageSplit[1].replace("/", ""));
         this.sourcePort = Integer.parseInt(messageSplit[2]);
         this.uuid = UUID.fromString(messageSplit[3]);
-        this.ttl = Integer.parseInt(messageSplit[4]);
-        this.dateTime = LocalDateTime.parse(messageSplit[5]);
-        this.messageDescriptor = MessageDescriptor.valueOf(messageSplit[6]);
-        this.messageContent = String.join(" ", Arrays.copyOfRange(messageSplit, 7, messageSplit.length));
+        if (!Objects.equals(messageSplit[4], "null")) {
+            this.chatUUID = UUID.fromString(messageSplit[4]);
+        } else {
+            this.chatUUID = null;
+        }
+        this.ttl = Integer.parseInt(messageSplit[5]);
+        this.dateTime = LocalDateTime.parse(messageSplit[6]);
+        this.messageDescriptor = MessageDescriptor.valueOf(messageSplit[7]);
+        this.messageContent = String.join(" ", Arrays.copyOfRange(messageSplit, 8, messageSplit.length));
 
     }
 
-    public Message(String sourceUsername, InetAddress sourceSocketAddress, int sourcePort, int ttl, MessageDescriptor messageDescriptor, String messageContent) {
+    public Message(String sourceUsername, InetAddress sourceSocketAddress, int sourcePort, UUID uuid, UUID chatUUID, int ttl, MessageDescriptor messageDescriptor, String messageContent) {
         this.sourceUsername = sourceUsername;
         this.sourceSocketAddress = sourceSocketAddress;
         this.sourcePort = sourcePort;
-        this.uuid = UUID.randomUUID();
+        this.uuid = Objects.requireNonNullElseGet(uuid, UUID::randomUUID);
+        this.chatUUID = chatUUID;
         this.ttl = ttl;
         this.dateTime = LocalDateTime.now();
         this.messageDescriptor = messageDescriptor;
@@ -46,7 +54,7 @@ public class Message {
 
     @Override
     public String toString() {
-        return this.sourceUsername + " " + this.sourceSocketAddress + " " + this.sourcePort + " " + this.uuid + " " + this.ttl + " " + this.dateTime + " " + this.messageDescriptor + " " + this.messageContent;
+        return this.sourceUsername + " " + this.sourceSocketAddress + " " + this.sourcePort + " " + this.uuid + " " + this.chatUUID + " " + this.ttl + " " + this.dateTime + " " + this.messageDescriptor + " " + this.messageContent;
     }
 
     public String getSourceUsername() {
@@ -63,6 +71,10 @@ public class Message {
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    public UUID getChatUUID() {
+        return chatUUID;
     }
 
     public int getTtl() {

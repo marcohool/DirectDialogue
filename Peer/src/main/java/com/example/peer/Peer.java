@@ -2,10 +2,7 @@ package com.example.peer;
 
 import Connections.ConnectionHandler;
 import Controllers.HomeController;
-import Messages.Message;
-import Messages.MessageDescriptor;
-import Messages.Query;
-import Messages.QueryDescriptor;
+import Messages.*;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
@@ -133,7 +130,7 @@ public class Peer extends Nodes.Node {
 
                 // If this peer needs more connection, send QUERY
                 if (this.activeConnections.size() < minNoOfConnections) {
-                    this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "1").toString(), 1, connectionHandler);
+                    this.sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.NEIGHBOURHOOD, "1").toString(), 1, null, null, connectionHandler);
                 }
 
                 switch (message.getMessageDescriptor()) {
@@ -142,13 +139,13 @@ public class Peer extends Nodes.Node {
                         this.activeConnections.put(message.getSourceUsername(), connectionHandler);
 
                         // Respond with PONG
-                        this.sendMessage(MessageDescriptor.PONG, null, 1, connectionHandler);
+                        this.sendMessage(MessageDescriptor.PONG, null, 1, null, null, connectionHandler);
 
                         // Send any queued messages
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
 
                         if (homeController != null) {
-                            homeController.setActivity(message.getSourceUsername());
+                            homeController.setActivity(message.getChatUUID());
                         }
                         break;
 
@@ -160,7 +157,7 @@ public class Peer extends Nodes.Node {
                         checkQueuedMessages(message.getSourceUsername(), connectionHandler);
 
                         if (homeController != null) {
-                            homeController.setActivity(message.getSourceUsername());
+                            homeController.setActivity(message.getChatUUID());
                         }
 
                         break;
@@ -174,7 +171,7 @@ public class Peer extends Nodes.Node {
 
                             String returnedAddresses = getRandomAddresses(message.getSourceUsername(), Integer.parseInt(query.getQueryContent()));
                             if (!returnedAddresses.equals("")) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 3, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, returnedAddresses, 5, null, null, connectionHandler);
                             }
 
                         }
@@ -184,16 +181,15 @@ public class Peer extends Nodes.Node {
 
                             // If this peer is connected to the user
                             if (this.activeConnections.containsKey(query.getQueryContent())) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + this.activeConnections.get(query.getQueryContent()).getRecipientAddress(), 1, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + this.activeConnections.get(query.getQueryContent()).getRecipientAddress(), 5, null, null, connectionHandler);
                             }
 
                             // Else echo message
                             else {
-                                System.out.println(this.getName() + " has connections " + this.activeConnections.values());
                                 for (ConnectionHandler connection : this.activeConnections.values()) {
                                     // Don't echo to sender of this message
                                     if (!connection.equals(connectionHandler)) {
-                                        this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), connection);
+                                        this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), null, null, connection);
 
                                     }
                                 }
@@ -215,7 +211,7 @@ public class Peer extends Nodes.Node {
 
                             // If QUERYHIT is simply a returned IP -> ping it
                             if (ipSplit.length == 2) {
-                                this.sendMessage(MessageDescriptor.PING, null, 1, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
+                                this.sendMessage(MessageDescriptor.PING, null, 1, null, null, new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
                                 break;
                             }
 
@@ -224,9 +220,10 @@ public class Peer extends Nodes.Node {
 
                             // Check query queues
                             for (Map.Entry<String, ArrayList<String>> entry : this.receivedQueryRequests.entrySet()) {
+                                System.out.println("entry : " + entry);
                                 // If entry contains a query for said user send QUERYHIT
                                 if (entry.getValue().contains(returnedUsername)) {
-                                    this.sendMessage(MessageDescriptor.QUERYHIT, returnedUsername + ":" + returnedIP, 3, entry.getKey());
+                                    this.sendMessage(MessageDescriptor.QUERYHIT, returnedUsername + ":" + returnedIP, null, null, 3, entry.getKey());
                                     entry.getValue().remove(returnedUsername);
                                 }
                             }
@@ -235,16 +232,16 @@ public class Peer extends Nodes.Node {
                             for (String entry : this.messageQueue.keySet()) {
                                 if (entry.equals(returnedUsername)) {
                                     // Ping IP
-                                    this.sendMessage(MessageDescriptor.PING, null, 1, returnedIP);
+                                    this.sendMessage(MessageDescriptor.PING, null, 1, null, null, returnedIP);
                                 }
                             }
                         }
                         break;
 
                     case MESSAGE:
-                        StoredMessage storedMessage = new StoredMessage(message.getUuid(), message.getSourceUsername(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime());
+                        StoredMessage storedMessage = new StoredMessage(message.getUuid(), message.getChatUUID(), message.getSourceUsername(), message.getMessageContent(), message.getDateTime());
                         storedMessage.setDelivered(true);
-                        this.addChatHistory(message.getSourceUsername(), storedMessage);
+                        Chat addedChat = addReceivedChatHistory(message.getChatUUID(), storedMessage);
 
                         // Wait for homeController to load if it is null
                         synchronized (homeControllerLock) {
@@ -257,7 +254,7 @@ public class Peer extends Nodes.Node {
                             }
                         }
 
-                        this.homeController.updateRecentChats(message.getSourceUsername());
+                        this.homeController.updateRecentChats(addedChat);
                         this.homeController.displayMessage(storedMessage);
 
                 }
@@ -290,9 +287,9 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public Chat getActiveChat(String chatName) {
+    public Chat getActiveChat(UUID chatUUID) {
         for (Chat chat : this.activeChats) {
-            if (chat.getChatName().equals(chatName)) {
+            if (chat.getChatUUID().equals(chatUUID)) {
                 return chat;
             }
         }
@@ -303,42 +300,64 @@ public class Peer extends Nodes.Node {
         return activeChats;
     }
 
-    public void addChatHistory(String chatName, StoredMessage message) {
-        boolean chatExists = false;
+    public Chat addReceivedChatHistory(UUID chatUUID, StoredMessage message) {
 
-        for (Chat activeChat : this.activeChats) {
-            if (activeChat.getChatName().equals(chatName) || activeChat.getChatUUID().toString().equals(chatName)) {
-                activeChat.addMessageHistory(message);
-                chatExists = true;
-            }
-        }
+        // If UUID is null, chat is a direct message
+        if (chatUUID == null) {
+            //boolean chatExists = false;
 
-        if (!chatExists) {
-            Chat newChat = new Chat(new HashSet<>(Collections.singleton(chatName)));
-            newChat.addMessageHistory(message);
-            this.activeChats.add(newChat);
-        }
-
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.schedule(() -> this.messageQueue.forEach((username, queuedMessages) -> {
-            if (username.equals(chatName)) {
-                for (Message message1 : queuedMessages) {
-                    if (message1.getUuid().equals(message.getUuid())) {
-                        queuedMessages.remove(message1);
-                        message.setFailed(true);
-                        this.homeController.setFailedSend(message);
-                    }
+            // Find if chat exists and add message to chat message history
+            for (Chat activeChat : this.activeChats) {
+                if (activeChat.getChatName().equals(message.getSender())) {
+                    activeChat.addMessageHistory(message);
+                    System.out.println("adding to chat " + activeChat + " " + activeChat.getChatName());
+                    System.out.println(this.activeChats);
+                    return activeChat;
                 }
             }
-        }), 10, TimeUnit.SECONDS);
+
+            // If chat is from new peer, create a chat and add it
+            Chat newChat = new Chat(new HashSet<>(Collections.singleton(message.getSender())));
+            this.activeChats.add(newChat);
+            newChat.addMessageHistory(message);
+            return newChat;
+
+        }
+
+        // Else, chat is to a group chat
+
+        return null;
+    }
+
+    // Add message history to existing chat
+    public void addChatHistory(Chat chat, StoredMessage message) {
+
+        chat.addMessageHistory(message);
+
+        if (!this.activeChats.contains(chat)) {
+            this.activeChats.add(chat);
+        }
+
+//        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+//        executor.schedule(() -> this.messageQueue.forEach((username, queuedMessages) -> {
+//            if (username.equals(chatName)) {
+//                for (Message message1 : queuedMessages) {
+//                    if (message1.getUuid().equals(message.getUuid())) {
+//                        queuedMessages.remove(message1);
+//                        message.setFailed(true);
+//                        this.homeController.setFailedSend(message);
+//                    }
+//                }
+//            }
+//        }), 10, TimeUnit.SECONDS);
 
     }
 
     public void createGroup(Set<String> participants) {
         Chat chat = new Chat(participants);
-        chat.addMessageHistory(new StoredMessage(null, chat.getChatName(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
+        chat.addMessageHistory(new StoredMessage(null, chat.getChatUUID(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
         this.activeChats.add(chat);
-        this.homeController.updateRecentChats(chat.getChatName());
+        this.homeController.updateRecentChats(chat);
     }
 
     public void changeScene(ActionEvent event, String fxmlFile) {
@@ -425,7 +444,7 @@ public class Peer extends Nodes.Node {
         InetSocketAddress peerToPing = initialPeers[random.nextInt(initialPeers.length)];
 
         // Ping random initial peer
-        this.sendMessage(MessageDescriptor.PING, null, 1, peerToPing);
+        this.sendMessage(MessageDescriptor.PING, null, 1, null, null, peerToPing);
     }
 
     // Util method to wait for connections to establish

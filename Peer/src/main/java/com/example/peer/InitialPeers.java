@@ -42,7 +42,7 @@ public class InitialPeers {
         for (Peer peer1 : peers) {
             for (Peer peer2: peers) {
                 if (peer1 != peer2) {
-                    peer1.sendMessage(MessageDescriptor.PING, null, 1, peer2.getAddress());
+                    peer1.sendMessage(MessageDescriptor.PING, null, 1, null, null, peer2.getAddress());
                 }
             }
         }
