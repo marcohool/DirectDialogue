@@ -25,6 +25,7 @@ public class Peer extends Nodes.Node {
     private final Object homeControllerLock = new Object();
     private final int minNoOfConnections = 1;
     private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.68.63", 1926);
+    private final ConcurrentHashMap<UUID, ConcurrentLinkedQueue<StoredMessage>> groupChatMessageQueue = new ConcurrentHashMap<>();
 
     private static final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
             new InetSocketAddress("127.0.0.1", 1),
@@ -189,7 +190,7 @@ public class Peer extends Nodes.Node {
                                 for (ConnectionHandler connection : this.activeConnections.values()) {
                                     // Don't echo to sender of this message
                                     if (!connection.equals(connectionHandler)) {
-                                        this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), null, null, connection);
+                                        this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), message.getUuid(), null, connection);
 
                                     }
                                 }
@@ -220,7 +221,6 @@ public class Peer extends Nodes.Node {
 
                             // Check query queues
                             for (Map.Entry<String, ArrayList<String>> entry : this.receivedQueryRequests.entrySet()) {
-                                System.out.println("entry : " + entry);
                                 // If entry contains a query for said user send QUERYHIT
                                 if (entry.getValue().contains(returnedUsername)) {
                                     this.sendMessage(MessageDescriptor.QUERYHIT, returnedUsername + ":" + returnedIP, null, null, 3, entry.getKey());
@@ -254,9 +254,23 @@ public class Peer extends Nodes.Node {
                             }
                         }
 
-                        this.homeController.updateRecentChats(addedChat);
+                        if (addedChat != null) {
+                            this.homeController.updateRecentChats(addedChat);
+                        }
                         this.homeController.displayMessage(storedMessage);
+                        break;
 
+                    case CREATE_GROUP:
+                        String[] participants = message.getMessageContent().replace("[", "").replace("]", "").split(",");
+                        for (int i = 0; i < participants.length; i++) {
+                            participants[i] = participants[i].trim();
+                        }
+                        Chat newChat = new Chat(message.getChatUUID(), new HashSet<>(Arrays.asList(participants)), this.getName());
+                        newChat.addMessageHistory(new StoredMessage(UUID.randomUUID(), newChat.getChatUUID(), "SYSTEM", message.getSourceUsername() + " has created the chat", message.getDateTime()));
+                        this.activeChats.add(newChat);
+                        //checkGroupQueuedMessages(newChat.getChatUUID());
+                        this.homeController.updateRecentChats(newChat);
+                        break;
                 }
             }
         }
@@ -287,6 +301,17 @@ public class Peer extends Nodes.Node {
 
     }
 
+    private void checkGroupQueuedMessages(UUID chatUUID) {
+        for (Map.Entry<UUID, ConcurrentLinkedQueue<StoredMessage>> queuedMessage : this.groupChatMessageQueue.entrySet()) {
+            if (queuedMessage.getKey().equals(chatUUID)) {
+                for (StoredMessage message : queuedMessage.getValue()) {
+                    addReceivedChatHistory(chatUUID, message);
+                    queuedMessage.getValue().remove(message);
+                }
+            }
+        }
+    }
+
     public Chat getActiveChat(UUID chatUUID) {
         for (Chat chat : this.activeChats) {
             if (chat.getChatUUID().equals(chatUUID)) {
@@ -310,23 +335,44 @@ public class Peer extends Nodes.Node {
             for (Chat activeChat : this.activeChats) {
                 if (activeChat.getChatName().equals(message.getSender())) {
                     activeChat.addMessageHistory(message);
-                    System.out.println("adding to chat " + activeChat + " " + activeChat.getChatName());
-                    System.out.println(this.activeChats);
                     return activeChat;
                 }
             }
 
             // If chat is from new peer, create a chat and add it
-            Chat newChat = new Chat(new HashSet<>(Collections.singleton(message.getSender())));
+            Chat newChat = new Chat(new HashSet<>(Collections.singleton(message.getSender())), this.getName());
             this.activeChats.add(newChat);
             newChat.addMessageHistory(message);
             return newChat;
 
         }
 
-        // Else, chat is to a group chat
+        // Else - message is to a group chat
+        else {
+            // If group chat exists, add message
+            for (Chat activeChat : this.activeChats) {
+                if (activeChat.getChatUUID() != null && activeChat.getChatUUID().equals(chatUUID)) {
+                    activeChat.addMessageHistory(message);
+                    return activeChat;
+                }
+            }
 
-        return null;
+            // Else add to message queue
+            addMessageToGroupQueue(chatUUID, message);
+//            String[] participants = message.getMessageContent().replace("[", "").replace("]", "").split(",");
+//            Chat newChat = new Chat(chatUUID, new HashSet<>(Arrays.asList(participants)), this.getName());
+//            this.activeChats.add(newChat);
+            return null;
+        }
+
+    }
+
+    private void addMessageToGroupQueue(UUID chatUUID, StoredMessage message) {
+        if (this.groupChatMessageQueue.containsKey(chatUUID)) {
+            this.groupChatMessageQueue.get(chatUUID).add(message);
+        } else {
+            this.groupChatMessageQueue.put(chatUUID, new ConcurrentLinkedQueue<>(Collections.singleton(message)));
+        }
     }
 
     // Add message history to existing chat
@@ -354,10 +400,16 @@ public class Peer extends Nodes.Node {
     }
 
     public void createGroup(Set<String> participants) {
-        Chat chat = new Chat(participants);
+        participants.add(this.getName());
+
+        Chat chat = new Chat(UUID.randomUUID(), participants, this.getName());
         chat.addMessageHistory(new StoredMessage(null, chat.getChatUUID(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
         this.activeChats.add(chat);
         this.homeController.updateRecentChats(chat);
+
+        for (String participant : participants) {
+            this.sendMessage(MessageDescriptor.CREATE_GROUP, chat.getAllChatParticipants().toString(), chat.getChatUUID(), null, 1, participant);
+        }
     }
 
     public void changeScene(ActionEvent event, String fxmlFile) {

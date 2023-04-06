@@ -138,6 +138,7 @@ public class HomeController implements Initializable {
         refreshChat(message.getChatUUID());
     }
 
+
     public void updateRecentChats(Chat chat) {
         // Move chat to top of listview
         ObservableList<Chat> items = lv_recent_contacts.getItems();
@@ -149,7 +150,7 @@ public class HomeController implements Initializable {
                     break;
                 }
             }
-            else if (items.get(i).getChatUUID().equals(chat.getChatUUID())) {
+            else if (items.get(i).getChatUUID() != null && items.get(i).getChatUUID().equals(chat.getChatUUID())) {
                 index = i;
                 break;
             }
@@ -173,7 +174,7 @@ public class HomeController implements Initializable {
         Chat[] chats = new Chat[users.length];
 
         for (int i = 0; i < users.length; i++) {
-            chats[i] = new Chat(new HashSet<>(Collections.singleton(users[i])));
+            chats[i] = new Chat(new HashSet<>(Collections.singleton(users[i])), peer.getName());
         }
         Platform.runLater(() -> lv_new_convo_results.setItems(FXCollections.observableArrayList(chats)));
     }
@@ -187,10 +188,8 @@ public class HomeController implements Initializable {
             tf_chat_message.setVisible(true);
             lbl_chat_name.setText(chat.getChatName());
             setActivity(chat.getChatUUID());
-
             vbox_messages.getChildren().clear();
             currentlyOpenChat = chat;
-            System.out.println(currentlyOpenChat + " is open chat ");
             for (StoredMessage message : chat.getMessageHistory()) {
                 displayMessage(message);
             }
@@ -243,14 +242,13 @@ public class HomeController implements Initializable {
         // Send message to each participant
         else {
             for (String participant : currentlyOpenChat.getChatParticipants()) {
-                peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, currentlyOpenChat.getChatUUID(), uuid, 1, participant);
+                peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, currentlyOpenChat.getChatUUID(), uuid, 1, participant.stripLeading());
             }
         }
 
         // Add message to message history
         StoredMessage storedMessage = new StoredMessage(uuid, currentlyOpenChat.getChatUUID(), peer.getName(), messageToSend, LocalDateTime.now());
         peer.addChatHistory(currentlyOpenChat, storedMessage);
-        System.out.println("adding sent to " + currentlyOpenChat + " " + currentlyOpenChat.getChatName());
         updateRecentChats(currentlyOpenChat);
 
         // Display message on GUI
@@ -258,10 +256,10 @@ public class HomeController implements Initializable {
     }
 
     private boolean messageBelongsToChat(StoredMessage message, Chat chat) {
-        if (message.getChatUUID() == chat.getChatUUID()) {
+        if (message.getChatUUID() != null && message.getChatUUID().equals(chat.getChatUUID())) {
             return true;
         } else {
-            return message.getChatUUID() == null && message.getSender().equals(chat.getChatParticipants().iterator().next());
+            return message.getChatUUID() == null && (message.getSender().equals(chat.getChatParticipants().iterator().next()) || message.getSender().equals(peer.getName()) ) && chat.getChatParticipants().size() == 1;
         }
     }
 
@@ -305,19 +303,32 @@ public class HomeController implements Initializable {
                     }
                 }
 
-                textFlow.getChildren().addAll(messageText, messageTime);
+                if (!message.getSender().equals("SYSTEM") && !message.getSender().equals(peer.getName())) {
+                    if (currentlyOpenChat.getChatParticipants().size() > 1) {
+                        Text usernameText = new Text(message.getSender() + "\n");
+                        usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
+                        textFlow.getChildren().addAll(usernameText, messageText, messageTime);
+                    } else {
+                        textFlow.getChildren().addAll(messageText, messageTime);
+                    }
+                } else {
+                    textFlow.getChildren().addAll(messageText, messageTime);
+                }
+
                 hBox.getChildren().add(textFlow);
 
+
                 Platform.runLater(
-                        () -> {
-                            vbox_messages.getChildren().add(hBox);
-                            tf_chat_message.clear();
-                            lv_new_convo_results.setCellFactory(lv -> setCells());
-                            lv_recent_contacts.setCellFactory(lv -> setCells());
-                        }
+                        () -> vbox_messages.getChildren().add(hBox)
                 );
 
             }
+
+            Platform.runLater(() -> {
+                tf_chat_message.clear();
+                lv_new_convo_results.setCellFactory(lv -> setCells());
+                lv_recent_contacts.setCellFactory(lv -> setCells());
+            });
 
         }
     }
