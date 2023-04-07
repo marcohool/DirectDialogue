@@ -86,8 +86,10 @@ public class HomeController implements Initializable {
         lv_new_convo_results.setFocusTraversable(false);
         lv_recent_contacts.setFocusTraversable(false);
 
-        vbox_messages.prefWidthProperty().bind(sp_chat.widthProperty().subtract(10));
+        vbox_messages.prefWidthProperty().bind(sp_chat.widthProperty().subtract(12));
         vbox_messages.prefHeightProperty().bind(sp_chat.heightProperty().subtract(10));
+
+        sp_chat.vvalueProperty().bind(vbox_messages.heightProperty());
 
         // Search bar text listener
         tf_searchbar.setOnAction(actionEvent -> {

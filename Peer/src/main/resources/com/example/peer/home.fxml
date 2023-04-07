@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import java.net.URL?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -67,8 +68,16 @@
             </HBox>
             <HBox prefHeight="702.0" prefWidth="328.0" VBox.vgrow="ALWAYS">
                <AnchorPane prefHeight="702.0" prefWidth="346.0" style="-fx-border-color: #e5e5e5; -fx-border-width: 0 1 0 0;">
-                  <ListView fx:id="lv_recent_contacts" focusTraversable="false" layoutX="85.0" layoutY="60.0" prefHeight="702.0" prefWidth="309.0" stylesheets="@../../../stylesheets/listview.css" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0" />
-                  <ListView fx:id="lv_new_convo_results" focusTraversable="false" layoutX="75.0" layoutY="85.0" prefHeight="592.0" prefWidth="328.0" stylesheets="@../../../stylesheets/listview.css" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="85.0" />
+                  <ListView fx:id="lv_recent_contacts" focusTraversable="false" layoutX="85.0" layoutY="60.0" prefHeight="702.0" prefWidth="309.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="-1.0" AnchorPane.topAnchor="0.0">
+                     <stylesheets>
+                        <URL value="@../../../stylesheets/listview.css" />
+                        <URL value="@../../../stylesheets/scrollpane.css" />
+                     </stylesheets></ListView>
+                  <ListView fx:id="lv_new_convo_results" focusTraversable="false" layoutX="75.0" layoutY="85.0" prefHeight="592.0" prefWidth="328.0" visible="false" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="85.0">
+                     <stylesheets>
+                        <URL value="@../../../stylesheets/listview.css" />
+                        <URL value="@../../../stylesheets/scrollpane.css" />
+                     </stylesheets></ListView>
                   <Button fx:id="btn_new_group" focusTraversable="false" layoutX="15.0" layoutY="15.0" mnemonicParsing="false" prefHeight="44.0" prefWidth="298.0" style="-fx-alignment: center-left;" stylesheets="@../../../stylesheets/listview.css" text="New Group" visible="false" />
                   <ImageView fx:id="iv_group" fitHeight="42.0" fitWidth="39.0" layoutX="25.0" layoutY="25.0" mouseTransparent="true" pickOnBounds="true" preserveRatio="true" visible="false">
                      <Image url="@group_image.png" />
@@ -93,7 +102,7 @@
             </VBox>
             <VBox fx:id="vbox_activity_status" alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS" />
          </HBox>
-         <ScrollPane fx:id="sp_chat" minHeight="0.0" minWidth="0.0" prefHeight="686.0" prefWidth="1047.0" style="-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;" VBox.vgrow="ALWAYS">
+         <ScrollPane fx:id="sp_chat" hbarPolicy="NEVER" minHeight="0.0" minWidth="0.0" prefHeight="686.0" prefWidth="1047.0" style="-fx-background: #FFFFFF; -fx-background-color: #FFFFFF;" stylesheets="@../../../stylesheets/scrollpane.css" VBox.vgrow="ALWAYS">
             <VBox fx:id="vbox_messages" />
          </ScrollPane>
          <HBox alignment="CENTER" minHeight="-Infinity" minWidth="0.0" prefHeight="67.0" prefWidth="1071.0" VBox.vgrow="NEVER">
