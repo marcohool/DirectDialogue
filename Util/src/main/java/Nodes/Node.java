@@ -21,7 +21,7 @@ public abstract class Node implements INode {
     private String name;
 
     // Store QUERY requests that have been echoed and waiting for QUERYHIT
-    protected final HashMap<String, ArrayList<String>> receivedQueryRequests = new HashMap<>();
+    protected final HashMap<String, HashSet<String>> receivedQueryRequests = new HashMap<>();
 
     // Starting a server node
     public Node(String name, InetSocketAddress address) {
@@ -42,6 +42,7 @@ public abstract class Node implements INode {
         try {
             Thread thread = new Thread(new Listener(this.address, this));
             thread.start();
+
         } catch (IOException e) {
             System.err.println("Error listening for incoming connections: " + e.getMessage());
         }
@@ -51,7 +52,7 @@ public abstract class Node implements INode {
         if (this.activeConnections.containsKey(destinationUsername)) {
             this.activeConnections.get(destinationUsername).sendMessage(message);
         } else {
-            System.out.println("connection dont exist matey");
+            System.out.println("connection dont exist matey - " + destinationUsername);
         }
     }
 
@@ -72,10 +73,11 @@ public abstract class Node implements INode {
                 this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(sentMessage)));
             }
 
+            UUID echoUUID = UUID.randomUUID();
             for (ConnectionHandler connections : this.activeConnections.values()) {
                 // Don't send QUERY to server
                 if (!connections.getRecipientAddress().equals(this.serverAddress)) {
-                    sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, destinationUsername).toString(), 3, null, null, connections);
+                    sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, destinationUsername).toString(), 3, echoUUID, null, connections);
                 }
             }
 

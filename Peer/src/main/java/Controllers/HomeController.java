@@ -237,16 +237,17 @@ public class HomeController implements Initializable {
 
         if (currentlyOpenChat.getChatParticipants().size() == 1) {
             peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, null, uuid, 1, currentlyOpenChat.getChatParticipants().iterator().next());
+            peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, null, uuid, 1, peer.getName());
         }
 
         // Send message to each participant
         else {
-            for (String participant : currentlyOpenChat.getChatParticipants()) {
+            for (String participant : currentlyOpenChat.getAllChatParticipants()) {
                 peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, currentlyOpenChat.getChatUUID(), uuid, 1, participant.stripLeading());
             }
         }
 
-        // Add message to message history
+//      Add message to message history
         StoredMessage storedMessage = new StoredMessage(uuid, currentlyOpenChat.getChatUUID(), peer.getName(), messageToSend, LocalDateTime.now());
         peer.addChatHistory(currentlyOpenChat, storedMessage);
         updateRecentChats(currentlyOpenChat);
@@ -263,9 +264,18 @@ public class HomeController implements Initializable {
         }
     }
 
+    private boolean messageIsEcho(StoredMessage message, Chat chat) {
+        for (StoredMessage storedMessage : chat.getMessageHistory()) {
+            if (storedMessage.getUuid().equals(message.getUuid()) && !storedMessage.getSender().equals(message.getSender())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void displayMessage(StoredMessage message) {
         if (currentlyOpenChat != null) {
-            if (messageBelongsToChat(message, currentlyOpenChat)) {
+            if (messageBelongsToChat(message, currentlyOpenChat) && !messageIsEcho(message, currentlyOpenChat)) {
                 // Display message
                 HBox hBox = new HBox();
                 hBox.setPadding(new Insets(1, 4, 1, 10));

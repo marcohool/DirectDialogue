@@ -89,7 +89,7 @@ public class Peer extends Nodes.Node {
         System.out.println(this.getName() + " RECEIVED MESSAGE : '" + message + "'");
 
         // Only handle message if it has not been received before & ttl > 0
-        if (!this.seenMessageUUIDs.contains(message.getUuid())) {
+        if (!this.seenMessageUUIDs.contains(message.getUuid()) && !message.getSourceUsername().equals(this.getName())) {
             this.seenMessageUUIDs.add(message.getUuid());
             this.lastReceivedMessage = message;
 
@@ -99,6 +99,10 @@ public class Peer extends Nodes.Node {
                     case LOGIN_SUCCESS:
                     case SIGNUP_SUCCESS:
                         this.setName(message.getMessageContent());
+
+                        // Establish connection with itself
+                        this.sendMessage(MessageDescriptor.PING, null, 1, null, null, this.address);
+
                         pingRandomInitialPeer();
                         changeScene(this.lastEvent, "home.fxml");
                         break;
@@ -195,9 +199,9 @@ public class Peer extends Nodes.Node {
 
                                 // Log echo
                                 if (this.receivedQueryRequests.containsKey(message.getSourceUsername())) {
-                                    this.receivedQueryRequests.get(message.getSourceUsername()).add(message.getMessageContent());
+                                    this.receivedQueryRequests.get(message.getSourceUsername()).add(message.getMessageContent().split(" ")[1]);
                                 } else {
-                                    this.receivedQueryRequests.put(message.getSourceUsername(), new ArrayList<>(Collections.singleton(message.getMessageContent().split(" ")[1])));
+                                    this.receivedQueryRequests.put(message.getSourceUsername(), new HashSet<>(Collections.singleton(message.getMessageContent().split(" ")[1])));
                                 }
 
                             }
@@ -216,9 +220,9 @@ public class Peer extends Nodes.Node {
 
                             String returnedUsername = ipSplit[0];
                             InetSocketAddress returnedIP = new InetSocketAddress(ipSplit[1].replace("/", ""), Integer.parseInt(ipSplit[2]));
-
+                            System.out.println(this.getName() + " query requests -> " + this.receivedQueryRequests);
                             // Check query queues
-                            for (Map.Entry<String, ArrayList<String>> entry : this.receivedQueryRequests.entrySet()) {
+                            for (Map.Entry<String, HashSet<String>> entry : this.receivedQueryRequests.entrySet()) {
                                 // If entry contains a query for said user send QUERYHIT
                                 if (entry.getValue().contains(returnedUsername)) {
                                     this.sendMessage(MessageDescriptor.QUERYHIT, returnedUsername + ":" + returnedIP, null, null, 3, entry.getKey());
@@ -259,17 +263,20 @@ public class Peer extends Nodes.Node {
                         break;
 
                     case CREATE_GROUP:
-                        String[] participants = message.getMessageContent().replace("[", "").replace("]", "").split(",");
+                        String[] participants = message.getMessageContent().split(",");
 
-                        for (int i = 0; i < participants.length; i++) {
+                        // Create chat
+                        Chat newChat = new Chat(message.getChatUUID(), new HashSet<>(Arrays.asList(Arrays.copyOfRange(participants, 1, participants.length))), this.getName());
+                        newChat.addMessageHistory(new StoredMessage(UUID.randomUUID(), newChat.getChatUUID(), "SYSTEM", participants[0] + " has created the chat", message.getDateTime()));
+
+                        // Ping all participants if connection is not already established
+                        for (int i = 1; i < participants.length; i++) {
                             participants[i] = participants[i].trim();
-
-                            // Ping participant if connection is not established already
-                            this.sendMessage(MessageDescriptor.PING, null, null, null, 1, participants[i]);
+                            // Don't ping yourself
+                            if (!participants[i].equals(this.getName())) {
+                                this.sendMessage(MessageDescriptor.PING, null, null, null, 1, participants[i]);
+                            }
                         }
-
-                        Chat newChat = new Chat(message.getChatUUID(), new HashSet<>(Arrays.asList(participants)), this.getName());
-                        newChat.addMessageHistory(new StoredMessage(UUID.randomUUID(), newChat.getChatUUID(), "SYSTEM", message.getSourceUsername() + " has created the chat", message.getDateTime()));
 
                         this.activeChats.add(newChat);
                         //checkGroupQueuedMessages(newChat.getChatUUID());
@@ -277,6 +284,9 @@ public class Peer extends Nodes.Node {
 
 
                         break;
+
+                    case JOIN_GROUP:
+
                 }
             }
         }
@@ -322,7 +332,6 @@ public class Peer extends Nodes.Node {
 
         // If UUID is null, chat is a direct message
         if (chatUUID == null) {
-            //boolean chatExists = false;
 
             // Find if chat exists and add message to chat message history
             for (Chat activeChat : this.activeChats) {
@@ -347,10 +356,10 @@ public class Peer extends Nodes.Node {
                 if (activeChat.getChatUUID() != null && activeChat.getChatUUID().equals(chatUUID)) {
                     activeChat.addMessageHistory(message);
 
-                    Message messageToEcho = new Message(this.getName(), this.address.getAddress(), this.address.getPort(), message.getUuid(), message.getChatUUID(), 1, MessageDescriptor.MESSAGE, message.getMessageContent());
                     // Echo message to all participants
+                    Message messageToEcho = new Message(this.getName(), this.address.getAddress(), this.address.getPort(), message.getUuid(), message.getChatUUID(), 1, MessageDescriptor.MESSAGE, message.getMessageContent());
                     for (String participant : activeChat.getAllChatParticipants()) {
-                        this.sendMessage(messageToEcho, participant);
+                        this.sendMessage(messageToEcho, participant.trim());
                     }
 
                     return activeChat;
@@ -403,12 +412,12 @@ public class Peer extends Nodes.Node {
         participants.add(this.getName());
 
         Chat chat = new Chat(UUID.randomUUID(), participants, this.getName());
-        chat.addMessageHistory(new StoredMessage(null, chat.getChatUUID(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
+        chat.addMessageHistory(new StoredMessage(UUID.randomUUID(), chat.getChatUUID(), "SYSTEM", this.getName() + " has created the chat", LocalDateTime.now()));
         this.activeChats.add(chat);
         this.homeController.updateRecentChats(chat);
 
         for (String participant : participants) {
-            this.sendMessage(MessageDescriptor.CREATE_GROUP, chat.getAllChatParticipants().toString(), chat.getChatUUID(), null, 1, participant);
+            this.sendMessage(MessageDescriptor.CREATE_GROUP, this.getName() + ", " + chat.getAllChatParticipants().toString().replace("[", "").replace("]", ""), chat.getChatUUID(), null, 1, participant);
         }
     }
 

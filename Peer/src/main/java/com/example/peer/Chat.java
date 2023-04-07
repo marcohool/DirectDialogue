@@ -16,7 +16,7 @@ public class Chat {
     public Chat(UUID chatUUID, Set<String> chatParticipants, String peerName) {
         //chatParticipants.add(peerName);
 
-        this.chatName = chatParticipants.stream().filter(s -> !s.equals(peerName)).collect(Collectors.joining(", ")).stripLeading();
+        this.chatName = chatParticipants.stream().filter(s -> !s.trim().equals(peerName)).collect(Collectors.joining(", ")).stripLeading();
         this.chatParticipants = chatParticipants;
         this.peerName = peerName;
         this.chatUUID = chatUUID;

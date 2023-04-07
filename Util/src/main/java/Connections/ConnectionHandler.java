@@ -76,7 +76,7 @@ public class ConnectionHandler extends Thread {
                 System.out.println("SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
                 PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
                 writer.println(message);
-                this.parentNode.getSeenMessageUUIDs().add(message.getUuid());
+                //this.parentNode.getSeenMessageUUIDs().add(message.getUuid());
             } catch (IOException e) {
                 System.out.println("Failed to send message " + message + "\n" + e);
             }
