@@ -12,10 +12,11 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public abstract class Node implements INode {
-    private InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
+    protected InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
     private InetSocketAddress serverAddress;
     public final ConcurrentHashMap<String, ConnectionHandler> activeConnections = new ConcurrentHashMap<>();
     protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
+    protected final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
     protected Message lastReceivedMessage = null;
     private String name;
 
@@ -43,6 +44,14 @@ public abstract class Node implements INode {
             thread.start();
         } catch (IOException e) {
             System.err.println("Error listening for incoming connections: " + e.getMessage());
+        }
+    }
+
+    public void sendMessage(Message message, String destinationUsername) {
+        if (this.activeConnections.containsKey(destinationUsername)) {
+            this.activeConnections.get(destinationUsername).sendMessage(message);
+        } else {
+            System.out.println("connection dont exist matey");
         }
     }
 
@@ -122,6 +131,24 @@ public abstract class Node implements INode {
         return null;
     }
 
+    public void handleDisconnect(ConnectionHandler connectionHandler) {
+        String username = null;
+
+        for ( Map.Entry<String, ConnectionHandler> entry : this.activeConnections.entrySet()) {
+            if (entry.getValue().equals(connectionHandler)) {
+                username = entry.getKey();
+                break;
+            }
+        }
+
+        if (username == null) {
+            return;
+        }
+
+        this.messageQueue.remove(username);
+        this.receivedQueryRequests.remove(username);
+        activeConnections.values().remove(connectionHandler);
+    }
 
     public void setName(String name) {
         this.name = name;
@@ -153,5 +180,9 @@ public abstract class Node implements INode {
 
     public ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> getMessageQueue() {
         return messageQueue;
+    }
+
+    public ArrayList<UUID> getSeenMessageUUIDs() {
+        return seenMessageUUIDs;
     }
 }

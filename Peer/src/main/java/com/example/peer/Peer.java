@@ -18,7 +18,6 @@ import java.util.*;
 import java.util.concurrent.*;
 
 public class Peer extends Nodes.Node {
-    private final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
     private final ArrayList<Chat> activeChats = new ArrayList<>();
     private ActionEvent lastEvent;
     private HomeController homeController;
@@ -182,7 +181,7 @@ public class Peer extends Nodes.Node {
 
                             // If this peer is connected to the user
                             if (this.activeConnections.containsKey(query.getQueryContent())) {
-                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + this.activeConnections.get(query.getQueryContent()).getRecipientAddress(), 5, null, null, connectionHandler);
+                                this.sendMessage(MessageDescriptor.QUERYHIT, query.getQueryContent() + ":" + this.activeConnections.get(query.getQueryContent()).getRecipientAddress(), 5, UUID.randomUUID(), null, connectionHandler);
                             }
 
                             // Else echo message
@@ -191,7 +190,6 @@ public class Peer extends Nodes.Node {
                                     // Don't echo to sender of this message
                                     if (!connection.equals(connectionHandler)) {
                                         this.sendMessage(MessageDescriptor.QUERY, message.getMessageContent(), message.getTtl(), message.getUuid(), null, connection);
-
                                     }
                                 }
 
@@ -262,14 +260,22 @@ public class Peer extends Nodes.Node {
 
                     case CREATE_GROUP:
                         String[] participants = message.getMessageContent().replace("[", "").replace("]", "").split(",");
+
                         for (int i = 0; i < participants.length; i++) {
                             participants[i] = participants[i].trim();
+
+                            // Ping participant if connection is not established already
+                            this.sendMessage(MessageDescriptor.PING, null, null, null, 1, participants[i]);
                         }
+
                         Chat newChat = new Chat(message.getChatUUID(), new HashSet<>(Arrays.asList(participants)), this.getName());
                         newChat.addMessageHistory(new StoredMessage(UUID.randomUUID(), newChat.getChatUUID(), "SYSTEM", message.getSourceUsername() + " has created the chat", message.getDateTime()));
+
                         this.activeChats.add(newChat);
                         //checkGroupQueuedMessages(newChat.getChatUUID());
                         this.homeController.updateRecentChats(newChat);
+
+
                         break;
                 }
             }
@@ -312,19 +318,6 @@ public class Peer extends Nodes.Node {
         }
     }
 
-    public Chat getActiveChat(UUID chatUUID) {
-        for (Chat chat : this.activeChats) {
-            if (chat.getChatUUID().equals(chatUUID)) {
-                return chat;
-            }
-        }
-        return null;
-    }
-
-    public ArrayList<Chat> getActiveChats() {
-        return activeChats;
-    }
-
     public Chat addReceivedChatHistory(UUID chatUUID, StoredMessage message) {
 
         // If UUID is null, chat is a direct message
@@ -353,6 +346,13 @@ public class Peer extends Nodes.Node {
             for (Chat activeChat : this.activeChats) {
                 if (activeChat.getChatUUID() != null && activeChat.getChatUUID().equals(chatUUID)) {
                     activeChat.addMessageHistory(message);
+
+                    Message messageToEcho = new Message(this.getName(), this.address.getAddress(), this.address.getPort(), message.getUuid(), message.getChatUUID(), 1, MessageDescriptor.MESSAGE, message.getMessageContent());
+                    // Echo message to all participants
+                    for (String participant : activeChat.getAllChatParticipants()) {
+                        this.sendMessage(messageToEcho, participant);
+                    }
+
                     return activeChat;
                 }
             }
@@ -510,6 +510,19 @@ public class Peer extends Nodes.Node {
 
     public void setLastEvent(ActionEvent lastEvent) {
         this.lastEvent = lastEvent;
+    }
+
+    public Chat getActiveChat(UUID chatUUID) {
+        for (Chat chat : this.activeChats) {
+            if (chat.getChatUUID().equals(chatUUID)) {
+                return chat;
+            }
+        }
+        return null;
+    }
+
+    public ArrayList<Chat> getActiveChats() {
+        return activeChats;
     }
 
 }
