@@ -1,5 +1,7 @@
 package com.example.peer;
 
+import Messages.Message;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -57,5 +59,18 @@ public class StoredMessage {
 
     public UUID getUuid() {
         return uuid;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == this) {
+            return true;
+        }
+
+        if (!(obj instanceof StoredMessage message)) {
+            return false;
+        }
+
+        return this.uuid == message.getUuid();
     }
 }

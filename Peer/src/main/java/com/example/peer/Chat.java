@@ -14,10 +14,10 @@ public class Chat {
     private final UUID chatUUID;
 
     public Chat(UUID chatUUID, Set<String> chatParticipants, String peerName) {
-        //chatParticipants.add(peerName);
+        chatParticipants.add(peerName);
 
         this.chatName = chatParticipants.stream().filter(s -> !s.trim().equals(peerName)).collect(Collectors.joining(", ")).stripLeading();
-        this.chatParticipants = chatParticipants;
+        this.chatParticipants = chatParticipants.stream().map(String::trim).collect(Collectors.toSet());
         this.peerName = peerName;
         this.chatUUID = chatUUID;
         this.messageHistory = new ArrayList<>();
@@ -27,7 +27,7 @@ public class Chat {
         chatParticipants.add(peerName);
 
         this.chatName = chatParticipants.stream().filter(s -> !s.equals(peerName)).collect(Collectors.joining(", ")).stripLeading();
-        this.chatParticipants = chatParticipants;
+        this.chatParticipants = chatParticipants.stream().map(String::trim).collect(Collectors.toSet());
         this.peerName = peerName;
         this.chatUUID = null;
         this.messageHistory = new ArrayList<>();

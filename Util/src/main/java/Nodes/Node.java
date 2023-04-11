@@ -16,7 +16,7 @@ public abstract class Node implements INode {
     private InetSocketAddress serverAddress;
     public final ConcurrentHashMap<String, ConnectionHandler> activeConnections = new ConcurrentHashMap<>();
     protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
-    protected final ArrayList<UUID> seenMessageUUIDs = new ArrayList<>();
+    protected final HashSet<UUID> seenMessageUUIDs = new HashSet<>();
     protected Message lastReceivedMessage = null;
     private String name;
 
@@ -184,7 +184,7 @@ public abstract class Node implements INode {
         return messageQueue;
     }
 
-    public ArrayList<UUID> getSeenMessageUUIDs() {
+    public HashSet<UUID> getSeenMessageUUIDs() {
         return seenMessageUUIDs;
     }
 }

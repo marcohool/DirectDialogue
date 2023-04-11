@@ -136,9 +136,9 @@ public class HomeController implements Initializable {
 
     }
 
-    public void setFailedSend(StoredMessage message) {
-        refreshChat(message.getChatUUID());
-    }
+//    public void setFailedSend(StoredMessage message) {
+//        refreshChat(message.getChatUUID());
+//    }
 
 
     public void updateRecentChats(Chat chat) {
@@ -228,9 +228,15 @@ public class HomeController implements Initializable {
 
     }
 
-    public void refreshChat(UUID chatUUID) {
-        if (currentlyOpenChat.getChatUUID().equals(chatUUID)) {
-            openChat(chatUUID);
+    public void refreshChat(Chat chat) {
+        if (currentlyOpenChat != null && currentlyOpenChat.getChatUUID() != null && currentlyOpenChat.equals(chat)) {
+            openChat(chat);
+        }
+    }
+
+    public void refreshChat(String username) {
+        if (currentlyOpenChat != null && currentlyOpenChat.getChatName().equals(username)) {
+            openChat(currentlyOpenChat);
         }
     }
 
@@ -239,12 +245,11 @@ public class HomeController implements Initializable {
 
         if (currentlyOpenChat.getChatParticipants().size() == 1) {
             peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, null, uuid, 1, currentlyOpenChat.getChatParticipants().iterator().next());
-            peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, null, uuid, 1, peer.getName());
         }
 
         // Send message to each participant
         else {
-            for (String participant : currentlyOpenChat.getAllChatParticipants()) {
+            for (String participant : currentlyOpenChat.getChatParticipants()) {
                 peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, currentlyOpenChat.getChatUUID(), uuid, 1, participant.stripLeading());
             }
         }
@@ -266,18 +271,9 @@ public class HomeController implements Initializable {
         }
     }
 
-    private boolean messageIsEcho(StoredMessage message, Chat chat) {
-        for (StoredMessage storedMessage : chat.getMessageHistory()) {
-            if (storedMessage.getUuid().equals(message.getUuid()) && !storedMessage.getSender().equals(message.getSender())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public void displayMessage(StoredMessage message) {
         if (currentlyOpenChat != null) {
-            if (messageBelongsToChat(message, currentlyOpenChat) && !messageIsEcho(message, currentlyOpenChat)) {
+            if (messageBelongsToChat(message, currentlyOpenChat)) {
                 // Display message
                 HBox hBox = new HBox();
                 hBox.setPadding(new Insets(1, 4, 1, 10));
@@ -315,14 +311,22 @@ public class HomeController implements Initializable {
                     }
                 }
 
-                if (!message.getSender().equals("SYSTEM") && !message.getSender().equals(peer.getName())) {
-                    if (currentlyOpenChat.getChatParticipants().size() > 1) {
+                if (!message.getSender().equals("SYSTEM") ) {
+                    Text deliveredText = new Text();
+                    if (message.isDelivered()) {
+                        deliveredText.setText("delivered");
+                    } else {
+                        deliveredText.setText("not delivered");
+                    }
+
+                    if (!message.getSender().equals(peer.getName()) && currentlyOpenChat.getChatParticipants().size() > 1) {
                         Text usernameText = new Text(message.getSender() + "\n");
                         usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
-                        textFlow.getChildren().addAll(usernameText, messageText, messageTime);
+                        textFlow.getChildren().addAll(usernameText, messageText, messageTime, deliveredText);
                     } else {
-                        textFlow.getChildren().addAll(messageText, messageTime);
+                        textFlow.getChildren().addAll(messageText, messageTime, deliveredText);
                     }
+
                 } else {
                     textFlow.getChildren().addAll(messageText, messageTime);
                 }

@@ -15,7 +15,7 @@ public class Server extends Node {
     public static void main(String[] args) {
 
         // Start server on specified IP and port
-        Server server = new Server("server1", new InetSocketAddress("192.168.68.63", 1926));
+        Server server = new Server("server1", new InetSocketAddress("192.168.68.55", 1926));
 
     }
 
