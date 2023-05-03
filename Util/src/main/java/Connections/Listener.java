@@ -8,7 +8,7 @@ import java.net.ServerSocket;
 import java.net.UnknownHostException;
 import java.util.Random;
 
-public class Listener implements Runnable {
+public class Listener implements Runnable{
     private final ServerSocket serverSocket;
     private final Node parentNode;
 
@@ -53,4 +53,5 @@ public class Listener implements Runnable {
             System.err.println("Error handling incoming connection: " + e.getMessage());
         }
     }
+
 }

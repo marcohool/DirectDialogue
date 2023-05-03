@@ -30,4 +30,5 @@ public class Query {
     public String toString() {
         return this.queryDescriptor + " " + queryContent;
     }
+
 }

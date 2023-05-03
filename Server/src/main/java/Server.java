@@ -2,9 +2,14 @@ import Connections.ConnectionHandler;
 import Messages.Message;
 import Messages.MessageDescriptor;
 import Nodes.Node;
+
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Locale;
+import java.util.UUID;
 
 public class Server extends Node {
 
@@ -12,52 +17,61 @@ public class Server extends Node {
         super(name, address);
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnknownHostException {
 
         // Start server on specified IP and port
-        Server server = new Server("server1", new InetSocketAddress("192.168.68.55", 1926));
+        Server server = new Server("server1", new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 1926));
 
     }
 
     public void handleMessage(Message message, ConnectionHandler connectionHandler) {
-        System.out.println(message + " received from " + connectionHandler.getRecipientAddress());
-        String[] messageSplit = message.getMessageContent().split(" ");
+        // If message TTL is > 0
+        if (message.getTtl() > 0) {
+            message.decrementTtl();
+            String[] messageSplit = message.getMessageContent().split(" ");
 
-        switch (message.getMessageDescriptor()) {
-            case LOGIN:
-                if (messageSplit.length < 2) {
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.LOGIN_ERROR, "error Please enter a valid username & password"));
-                } else {
-                    MessageDescriptor response = Database.loginUser(messageSplit[0], messageSplit[1]);
-                    if (response.equals(MessageDescriptor.LOGIN_SUCCESS)) {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.LOGIN_SUCCESS, messageSplit[0]));
-                    } else {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(),null, null, 1, MessageDescriptor.LOGIN_ERROR, null));
+            switch (message.getMessageDescriptor()) {
+                case LOGIN:
+
+                    // If login message is invalid
+                    if (messageSplit.length < 2) {
+                        connectionHandler.sendMessage(signMessage(MessageDescriptor.LOGIN_ERROR, "Please enter a valid username & password"));
                     }
-                }
-                break;
-            case SIGNUP:
-                if (messageSplit.length < 2) {
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_ERROR, "No username/password"));
-                } else {
-                    String response = Database.registerUser(messageSplit[0], messageSplit[1]);
-                    if (response.equals("success")) {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_SUCCESS, messageSplit[0]));
-                    } else {
-                        connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SIGNUP_ERROR, response));
+                    // Login user
+                    else {
+                        MessageDescriptor response = Database.loginUser(messageSplit[0], messageSplit[1]);
+                        if (response.equals(MessageDescriptor.LOGIN_SUCCESS)) {
+                            connectionHandler.sendMessage(signMessage(MessageDescriptor.LOGIN_SUCCESS, messageSplit[0]));
+                        }
+                        else {
+                            connectionHandler.sendMessage(signMessage(MessageDescriptor.LOGIN_ERROR, null));
+                        }
                     }
-                }
-                break;
-            // search [username query]
-            case SEARCH:
-                if (messageSplit.length > 0) {
-                    ArrayList<String> responses = Database.searchUser(message.getMessageContent());
-                    responses.remove(message.getSourceUsername());
-                    connectionHandler.sendMessage(new Message(this.getName(), this.getAddress().getAddress(), this.getAddress().getPort(), null, null, 1, MessageDescriptor.SEARCH, String.join(" ", responses)));
-                }
-                break;
+                    break;
+
+                case SIGNUP:
+                    if (messageSplit.length < 2) {
+                        connectionHandler.sendMessage(signMessage(MessageDescriptor.SIGNUP_ERROR, "No username/password"));
+                    } else {
+                        String response = Database.registerUser(messageSplit[0], messageSplit[1]);
+                        if (response.equals("success")) {
+                            connectionHandler.sendMessage(signMessage(MessageDescriptor.SIGNUP_SUCCESS, messageSplit[0]));
+                        } else {
+                            connectionHandler.sendMessage(signMessage(MessageDescriptor.SIGNUP_ERROR, response));
+                        }
+                    }
+
+                case SEARCH:
+                    if (messageSplit.length > 0) {
+                        ArrayList<String> responses = Database.searchUser(message.getMessageContent());
+                        responses.remove(message.getSourceUsername());
+                        connectionHandler.sendMessage(signMessage(MessageDescriptor.SEARCH, String.join(" ", responses)));
+                    }
+                    break;
+            }
         }
     }
+
 }
 
 class Database {
@@ -134,9 +148,7 @@ class Database {
 
             if (rs.isBeforeFirst()) {
                 returnMessage = "Username taken";
-            }
-
-            else {
+            } else {
                 if (!username.equals("") && !password.equals("")) {
 
                     psInsert = conn.prepareStatement("INSERT INTO users (username, password) VALUES (?, ?) ");
@@ -184,5 +196,4 @@ class Database {
             }
         }
     }
-
 }

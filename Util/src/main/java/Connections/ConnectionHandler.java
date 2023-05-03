@@ -2,22 +2,26 @@ package Connections;
 
 import Messages.Message;
 import Nodes.Node;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 
 public class ConnectionHandler extends Thread {
+    private String recipientName;
+    private InetSocketAddress recipientAddress;
     private final Socket socket;
     private final Node parentNode;
-    private InetSocketAddress recipientAddress;
 
     // When initiating a new connection
     public ConnectionHandler(InetSocketAddress address, Node parentNode) throws IOException {
         this.recipientAddress = address;
         this.socket = new Socket(address.getAddress(), this.recipientAddress.getPort());
         this.parentNode = parentNode;
+        this.start();
     }
 
     // When receiving connection from serverSocket.accept()
@@ -29,7 +33,6 @@ public class ConnectionHandler extends Thread {
 
     @Override
     public void run() {
-
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
 
@@ -42,8 +45,10 @@ public class ConnectionHandler extends Thread {
                 if (readMessage != null) {
                     message = new Message(readMessage);
 
-                    // Set recipient address as serverIP of incoming message
+                    // Set recipient address & recipient name
+                    this.recipientName = message.getSourceUsername();
                     this.recipientAddress = new InetSocketAddress(message.getSourceSocketAddress(), message.getSourcePort());
+                    System.out.println(parentNode.getName() + " RECEIVED MESSAGE (" + this.recipientAddress + ") : " + message);
 
                     // Assign message to be handled by the node
                     parentNode.handleMessage(message, this);
@@ -54,12 +59,12 @@ public class ConnectionHandler extends Thread {
         } catch (Exception e) {
             // Connection closed - remove connection
             e.printStackTrace();
-            parentNode.activeConnections.values().remove(this);
+            parentNode.activeConnections.remove(this);
 
             // Close socket
             try {
                 this.socket.close();
-                System.out.println("Connection closed with " + this.getRecipientAddress() + " by " + this.parentNode.getName());
+                System.out.println("Connection closed with " + this.recipientAddress + " by " + this.parentNode.getName());
                 System.out.println(parentNode.getName() + " -> " + parentNode.activeConnections);
             } catch (IOException ex) {
                 ex.printStackTrace();
@@ -68,27 +73,20 @@ public class ConnectionHandler extends Thread {
     }
 
     public void sendMessage(Message message) {
-        message.decrementTtl();
-
-        // Only send message if ttl is >= 0
-        if (message.getTtl() >= 0) {
-            try {
-                System.out.println("SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
-                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                writer.println(message);
-                //this.parentNode.getSeenMessageUUIDs().add(message.getUuid());
-            } catch (IOException e) {
-                System.out.println("Failed to send message " + message + "\n" + e);
+        try {
+            System.out.println(parentNode.getName() + " SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
+            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+            writer.println(message);
+        } catch (IOException e) {
+            System.out.println("Failed to send message " + message + "\n" + e);
             }
-        }
+    }
+
+    public String getRecipientName() {
+        return recipientName;
     }
 
     public InetSocketAddress getRecipientAddress() {
-        return this.recipientAddress;
+        return recipientAddress;
     }
-
-    public Node getParentNode() {
-        return parentNode;
-    }
-
 }

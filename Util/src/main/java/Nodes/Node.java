@@ -6,31 +6,31 @@ import Messages.Message;
 import Messages.MessageDescriptor;
 import Messages.Query;
 import Messages.QueryDescriptor;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.Collections;
+import java.util.ConcurrentModificationException;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 public abstract class Node implements INode {
-    protected InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
-    private InetSocketAddress serverAddress;
-    public final ConcurrentHashMap<String, ConnectionHandler> activeConnections = new ConcurrentHashMap<>();
-    protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
-    protected final HashSet<UUID> seenMessageUUIDs = new HashSet<>();
-    protected Message lastReceivedMessage = null;
     private String name;
+    protected InetSocketAddress address = new InetSocketAddress("127.0.0.1", 0);
+    public final Queue<ConnectionHandler> activeConnections = new UniqueRecipientQueue<>();
 
-    // Store QUERY requests that have been echoed and waiting for QUERYHIT
-    protected final HashMap<String, HashSet<String>> receivedQueryRequests = new HashMap<>();
+    // Queues
+    protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
 
-    // Starting a server node
+    // Starting node with a specified address
     public Node(String name, InetSocketAddress address) {
         this.name = name;
         this.address = address;
         startListener();
     }
 
-    // Starting a client node
+    // Starting a node with a randomly generated address
     public Node(String name) {
         this.name = name;
         startListener();
@@ -48,108 +48,98 @@ public abstract class Node implements INode {
         }
     }
 
-    public void sendMessage(Message message, String destinationUsername) {
-        if (this.activeConnections.containsKey(destinationUsername)) {
-            this.activeConnections.get(destinationUsername).sendMessage(message);
-        } else {
-            System.out.println("connection dont exist matey - " + destinationUsername);
-        }
-    }
+    public void sendMessageToUsername(Message message, String username) {
+        // Check if connection with this user already exists
+        ConnectionHandler connection = searchForEstablishedConnectionByUsername(username);
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, UUID chatUUID, UUID messageUUID, int ttl, String destinationUsername) {
-        Message sentMessage;
-
-        // Check if connection with user exists
-        ConnectionHandler connection = this.activeConnections.get(destinationUsername);
-
-        // If not, QUERY local neighbours for username IP address
+        // If there is no established connection with this user, send query to find them
         if (connection == null) {
-
             // Add message to queue
-            sentMessage = new Message(this.name, this.address.getAddress(), this.address.getPort(), messageUUID, chatUUID, ttl, messageDescriptor, messageContent);
-            if (this.messageQueue.containsKey(destinationUsername)) {
-                this.messageQueue.get(destinationUsername).add(sentMessage);
-            } else {
-                this.messageQueue.put(destinationUsername, new ConcurrentLinkedQueue<>(Collections.singleton(sentMessage)));
-            }
+            addMessageToQueue(username, message);
 
-            UUID echoUUID = UUID.randomUUID();
-            for (ConnectionHandler connections : this.activeConnections.values()) {
-                // Don't send QUERY to server
-                if (!connections.getRecipientAddress().equals(this.serverAddress)) {
-                    sendMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, destinationUsername).toString(), 3, echoUUID, null, connections);
-                }
+            // Query for user
+            Message queryMessage = signMessage(MessageDescriptor.QUERY, new Query(QueryDescriptor.USER, username).toString());
+            queryMessage.setTtl(5);
+            for (ConnectionHandler activeConnection : this.activeConnections) {
+                activeConnection.sendMessage(queryMessage);
             }
 
         } else {
-            sendMessage(messageDescriptor, messageContent, ttl, messageUUID, chatUUID, connection);
+            // Else send message to the user from the already established connection
+            connection.sendMessage(message);
         }
 
     }
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, UUID messageUUID, UUID chatUUID,  InetSocketAddress destinationAddress) {
-
+    public void sendMessageToAddress(Message message, InetSocketAddress destinationAddress) {
         try {
-            // Check if there is an existing connection with recipient
-            ConnectionHandler connection = searchForEstablishedConnection(destinationAddress);
+            // Check if connection with this address already exists
+            ConnectionHandler connection = searchForEstablishedConnectionByAddress(destinationAddress);
 
             // If there is no established connection create a new one
             if (connection == null) {
                 connection = new ConnectionHandler(destinationAddress, this);
-
-                // Listen to incoming messages on this channel
-                connection.start();
-
-                sendMessage(messageDescriptor, messageContent, ttl, messageUUID, chatUUID, connection);
-
             }
+
+            // Send message
+            connection.sendMessage(message);
+
         } catch (IOException e) {
             System.out.println("-- Connection refused to " + destinationAddress + " --");
             e.printStackTrace();
         }
     }
 
-    public void sendMessage(MessageDescriptor messageDescriptor, String messageContent, int ttl, UUID messageUUID, UUID chatUUID, ConnectionHandler connectionHandler) {
-        // Set message details
-        Message message = new Message(this.name, this.address.getAddress(), this.address.getPort(), messageUUID, chatUUID, ttl, messageDescriptor, messageContent);
-
-        // Send message across the connection
-        connectionHandler.sendMessage(message);
-
-    }
-
-    protected synchronized ConnectionHandler searchForEstablishedConnection(InetSocketAddress address) {
-
+    private synchronized ConnectionHandler searchForEstablishedConnectionByAddress(InetSocketAddress address) {
         try {
-            for (ConnectionHandler conn : this.activeConnections.values()) {
+            for (ConnectionHandler conn : this.activeConnections) {
                 if (conn.getRecipientAddress().equals(address)) {
                     return conn;
                 }
             }
         } catch (ConcurrentModificationException e) {
             System.out.println("java.util.ConcurrentModificationException");
-            searchForEstablishedConnection(address);
+            searchForEstablishedConnectionByAddress(address);
         }
         return null;
     }
 
-    public void handleDisconnect(ConnectionHandler connectionHandler) {
-        String username = null;
-
-        for ( Map.Entry<String, ConnectionHandler> entry : this.activeConnections.entrySet()) {
-            if (entry.getValue().equals(connectionHandler)) {
-                username = entry.getKey();
-                break;
+    private synchronized ConnectionHandler searchForEstablishedConnectionByUsername(String username) {
+        try {
+            for (ConnectionHandler conn : this.activeConnections) {
+                if (conn.getRecipientName().equals(username)) {
+                    return conn;
+                }
             }
+        } catch (ConcurrentModificationException e) {
+            System.out.println("java.util.ConcurrentModificationException");
+            searchForEstablishedConnectionByUsername(username);
         }
+        return null;
+    }
 
-        if (username == null) {
-            return;
+    protected void addMessageToQueue(String recipient, Message message) {
+        if (this.messageQueue.containsKey(recipient)) {
+            this.messageQueue.get(recipient).add(message);
+        } else {
+            this.messageQueue.put(recipient, new ConcurrentLinkedQueue<>(Collections.singleton(message)));
         }
+    }
 
-        this.messageQueue.remove(username);
-        this.receivedQueryRequests.remove(username);
-        activeConnections.values().remove(connectionHandler);
+    public Message signMessage(MessageDescriptor messageDescriptor, String messageContent) {
+        return new Message(this.getName(), this.address.getAddress(), this.address.getPort(), null, null, 3, messageDescriptor, this.getName(), messageContent);
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public InetSocketAddress getAddress() {
+        return address;
+    }
+
+    public Queue<ConnectionHandler> getActiveConnections() {
+        return activeConnections;
     }
 
     public void setName(String name) {
@@ -159,32 +149,17 @@ public abstract class Node implements INode {
     public void setAddress(InetSocketAddress address) {
         this.address = address;
     }
+}
 
-    public void setServerAddress(InetSocketAddress serverAddress) {
-        this.serverAddress = serverAddress;
-    }
 
-    public InetSocketAddress getServerAddress() {
-        return serverAddress;
-    }
-
-    public InetSocketAddress getAddress() {
-        return address;
-    }
-
-    public ConcurrentHashMap<String, ConnectionHandler> getActiveConnections() {
-        return activeConnections;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> getMessageQueue() {
-        return messageQueue;
-    }
-
-    public HashSet<UUID> getSeenMessageUUIDs() {
-        return seenMessageUUIDs;
+class UniqueRecipientQueue<E extends ConnectionHandler> extends ConcurrentLinkedQueue<E> {
+    @Override
+    public boolean add(E e) {
+        for (E element : this) {
+            if (element.getRecipientName().equals(e.getRecipientName())) {
+                return false;
+            }
+        }
+        return super.add(e);
     }
 }

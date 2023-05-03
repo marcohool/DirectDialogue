@@ -1,11 +1,11 @@
 package Controllers;
 
+import Connections.ConnectionHandler;
 import Messages.Message;
 import Messages.MessageDescriptor;
 import com.example.peer.Chat;
 import com.example.peer.Peer;
 import com.example.peer.PeerUI;
-import com.example.peer.StoredMessage;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -17,23 +17,22 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
 import javafx.scene.text.Text;
-import javafx.scene.text.TextAlignment;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
-import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class HomeController implements Initializable {
     private final Peer peer = PeerUI.peer;
-    private Chat currentlyOpenChat;
+    private Chat currentlyOpenChat = null;
 
     @FXML
     private TextField tf_searchbar;
@@ -83,31 +82,29 @@ public class HomeController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
 
+        // Display configurations
         lv_new_convo_results.setFocusTraversable(false);
         lv_recent_contacts.setFocusTraversable(false);
-
         vbox_messages.prefWidthProperty().bind(sp_chat.widthProperty().subtract(12));
         vbox_messages.prefHeightProperty().bind(sp_chat.heightProperty().subtract(10));
-
         sp_chat.vvalueProperty().bind(vbox_messages.heightProperty());
+
+        // Set content of listviews
+        lv_new_convo_results.setCellFactory(lv -> setCells());
+        lv_recent_contacts.setCellFactory(lv -> setCells());
+
+        // Toggles
+        btn_new_convo.setOnAction(actionEvent -> toggleNewConvo());
+        btn_new_convo_back.setOnAction(actionEvent -> toggleNewConvo());
+        mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() + " - " + peer.activeConnections.stream().map(ConnectionHandler::getRecipientName).collect(Collectors.joining(" "))));
+        //mi_message_queue.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getMessageQueue()));
+
 
         // Search bar text listener
         tf_searchbar.setOnAction(actionEvent -> {
             if (!tf_searchbar.getText().equals("")) {
                 peer.setLastEvent(actionEvent);
-                peer.sendMessage(MessageDescriptor.SEARCH, tf_searchbar.getText().toLowerCase(), 1, null, null, peer.getServerAddress());
-            }
-        });
-
-        lv_new_convo_results.setCellFactory(lv -> setCells());
-        lv_recent_contacts.setCellFactory(lv -> setCells());
-
-        // Sending messages
-        tf_chat_message.setOnAction(actionEvent -> {
-            String messageToSend = tf_chat_message.getText();
-            if (!messageToSend.isEmpty()) {
-                // Send message
-                sendMessage(messageToSend);
+                peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.SEARCH, tf_searchbar.getText().toLowerCase()), peer.getServerAddress());
             }
         });
 
@@ -128,20 +125,137 @@ public class HomeController implements Initializable {
             }
         });
 
-        btn_new_convo.setOnAction(actionEvent -> toggleNewConvo());
-        btn_new_convo_back.setOnAction(actionEvent -> toggleNewConvo());
-
-        mi_active_connections.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.activeConnections));
-        mi_message_queue.setOnAction(actionEvent -> System.out.println(peer.getName() +" -> " + peer.getMessageQueue()));
+        // Sending messages
+        tf_chat_message.setOnAction(actionEvent -> {
+            String messageToSend = tf_chat_message.getText();
+            if (!messageToSend.isEmpty()) {
+                // Send message
+                sendMessage(messageToSend, currentlyOpenChat);
+            }
+        });
 
     }
 
-//    public void setFailedSend(StoredMessage message) {
-//        refreshChat(message.getChatUUID());
-//    }
+    private void sendMessage(String messageContent, Chat openChat) {
+        Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, messageContent);
+        messageToSend.setTtl(5);
 
+        // Set chatUUID to null if it is a direct message
+        if (openChat.getChatParticipants().size() == 1) {
+            messageToSend.setChatUUID(null);
+        }
+        else {
+            messageToSend.setChatUUID(openChat.getChatUUID());
+        }
+
+        peer.addChatMessage(openChat, messageToSend);
+
+        // Broadcast message
+        peer.broadcastMessage(messageToSend, openChat.getChatParticipants());
+
+        // Add message to chat message history
+        updateRecentChats(openChat);
+
+    }
+
+    private void openChat(Chat chat) {
+        Platform.runLater(() -> {
+            currentlyOpenChat = chat;
+            tf_chat_message.setVisible(true);
+            lbl_chat_name.setText(chat.getChatName());
+
+            Platform.runLater(() -> {
+                vbox_messages.getChildren().clear();
+                for (Message message : chat.getMessageHistory()) {
+                    displayMessage(message);
+                }
+            });
+
+        });
+    }
+
+    private void displayMessage(Message message) {
+        // Display message
+        HBox hBox = new HBox();
+        hBox.setPadding(new Insets(1, 4, 1, 10));
+
+        // Set TextFlows
+        Text messageText = new Text(message.getMessageContent());
+        messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
+        Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
+
+        TextFlow textFlow = new TextFlow();
+        textFlow.setPadding(new Insets(5, 10, 5, 10));
+
+
+        if (message.getSourceUsername().equals(peer.getName())) {
+            hBox.setAlignment(Pos.CENTER_RIGHT);
+            messageText.setFill(Color.WHITE);
+            messageTime.setFill(Color.WHITE);
+            textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
+
+            // Delivered participants tooltip
+            textFlow.setOnMouseEntered(e -> {
+                StringBuilder tooltipText = new StringBuilder("Message delivered to: ");
+
+                // Append all delivered to recipients to tooltip text
+                for (Map.Entry<String, Boolean> recipient : message.getDelivered().entrySet()) {
+                    if (recipient.getValue()) {
+                        tooltipText.append(" ").append(recipient.getKey());
+                    }
+                }
+
+                // Install tooltip
+                Tooltip tooltip = new Tooltip(tooltipText.toString());
+                Tooltip.install(textFlow, tooltip);
+            });
+
+        }
+        // Else if message is from SYSTEM
+        else {
+            if (message.getSourceUsername().equals("SYSTEM")) {
+                if (message.getMessageDescriptor().equals(MessageDescriptor.CREATE_GROUP)) {
+                    // Set chat creation message
+                    messageText.setText(message.getMessageContent().split(",")[0] + " has created the chat");
+                }
+                hBox.setAlignment(Pos.CENTER);
+                messageText.setStyle("-fx-text-fill: rgb(134,134,134); -fx-font: 11 Berlin-Sans-FB;");
+            }
+            // Else message is from non-sender peer
+            else {
+                // If chat is group chat, show username of sender
+                if (currentlyOpenChat.getChatParticipants().size() > 1) {
+                    Text usernameText = new Text(message.getOriginalSender() + "\n");
+                    usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
+                    textFlow.getChildren().add(usernameText);
+                }
+                hBox.setAlignment(Pos.CENTER_LEFT);
+                textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
+            }
+        }
+
+        System.out.println(message.getMessageContent() + " : " + message.getDelivered());
+
+        // Set components
+        textFlow.getChildren().addAll(messageText, messageTime);
+        hBox.getChildren().add(textFlow);
+
+        Platform.runLater(
+                () -> {
+                    tf_chat_message.clear();
+                    vbox_messages.getChildren().add(hBox);
+                    lv_new_convo_results.setCellFactory(lv -> setCells());
+                    lv_recent_contacts.setCellFactory(lv -> setCells());
+                });
+
+    }
 
     public void updateRecentChats(Chat chat) {
+        // Refresh chat if currently open chat is the same
+        if (this.currentlyOpenChat != null && this.currentlyOpenChat.equals(chat)) {
+            openChat(chat);
+        }
+
         // Move chat to top of listview
         ObservableList<Chat> items = lv_recent_contacts.getItems();
         int index = -1;
@@ -171,205 +285,27 @@ public class HomeController implements Initializable {
 
     }
 
-
     public void updateUserSearchLV(String[] users) {
         Chat[] chats = new Chat[users.length];
 
         for (int i = 0; i < users.length; i++) {
-            chats[i] = new Chat(new HashSet<>(Collections.singleton(users[i])), peer.getName());
+            boolean chatExists = false;
+
+            // Set chat listview to existing chat if it already exists with that user
+            for (Chat activeChat : peer.getActiveChats()) {
+                if (activeChat.getChatParticipants().equals(new HashSet<>(Collections.singleton(users[i])))) {
+                    chats[i] = activeChat;
+                    chatExists = true;
+                    break;
+                }
+            }
+
+            if (!chatExists) {
+                chats[i] = new Chat(null, new HashSet<>(Collections.singleton(users[i])));
+            }
+
         }
         Platform.runLater(() -> lv_new_convo_results.setItems(FXCollections.observableArrayList(chats)));
-    }
-
-    private void openChat(UUID chatUUID) {
-        openChat(peer.getActiveChat(chatUUID));
-    }
-
-    private void openChat(Chat chat) {
-        Platform.runLater(() -> {
-            tf_chat_message.setVisible(true);
-            lbl_chat_name.setText(chat.getChatName());
-            setActivity(chat.getChatUUID());
-            vbox_messages.getChildren().clear();
-            currentlyOpenChat = chat;
-            for (StoredMessage message : chat.getMessageHistory()) {
-                displayMessage(message);
-            }
-        });
-    }
-
-    public void setActivity(UUID chatUUID) {
-        Platform.runLater(() -> {
-            if (currentlyOpenChat != null && currentlyOpenChat.getChatUUID() != null && currentlyOpenChat.getChatUUID().equals(chatUUID)) {
-                vbox_activity_status.getChildren().clear();
-
-                TextFlow activityStatus = new TextFlow();
-                activityStatus.setTextAlignment(TextAlignment.RIGHT);
-                activityStatus.setPadding(new Insets(0, 20, 0, 0));
-
-                Text activityText = new Text();
-                Circle circle = new Circle(6);
-
-                if (currentlyOpenChat.getChatParticipants().size() == 1) {
-                    if (peer.getActiveConnections().containsKey(currentlyOpenChat.getChatParticipants().iterator().next())) {
-                        activityText.setText("Online  ");
-                        circle.setFill(Color.GREEN);
-                    } else {
-                        activityText.setText("Status Unknown  ");
-                        circle.setFill(Color.GREY);
-                    }
-
-                    activityStatus.getChildren().add(activityText);
-                    activityStatus.getChildren().add(circle);
-                    vbox_activity_status.getChildren().add(activityStatus);
-                }
-            }
-        });
-
-    }
-
-    public void refreshChat(Chat chat) {
-        if (currentlyOpenChat != null && currentlyOpenChat.getChatUUID() != null && currentlyOpenChat.equals(chat)) {
-            openChat(chat);
-        }
-    }
-
-    public void refreshChat(String username) {
-        if (currentlyOpenChat != null && currentlyOpenChat.getChatName().equals(username)) {
-            openChat(currentlyOpenChat);
-        }
-    }
-
-    private void sendMessage(String messageToSend) {
-        UUID uuid = UUID.randomUUID();
-
-        if (currentlyOpenChat.getChatParticipants().size() == 1) {
-            peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, null, uuid, 1, currentlyOpenChat.getChatParticipants().iterator().next());
-        }
-
-        // Send message to each participant
-        else {
-            for (String participant : currentlyOpenChat.getChatParticipants()) {
-                peer.sendMessage(MessageDescriptor.MESSAGE, messageToSend, currentlyOpenChat.getChatUUID(), uuid, 1, participant.stripLeading());
-            }
-        }
-
-//      Add message to message history
-        StoredMessage storedMessage = new StoredMessage(uuid, currentlyOpenChat.getChatUUID(), peer.getName(), messageToSend, LocalDateTime.now());
-        peer.addChatHistory(currentlyOpenChat, storedMessage);
-        updateRecentChats(currentlyOpenChat);
-
-        // Display message on GUI
-        displayMessage(storedMessage);
-    }
-
-    private boolean messageBelongsToChat(StoredMessage message, Chat chat) {
-        if (message.getChatUUID() != null && message.getChatUUID().equals(chat.getChatUUID())) {
-            return true;
-        } else {
-            return message.getChatUUID() == null && (message.getSender().equals(chat.getChatParticipants().iterator().next()) || message.getSender().equals(peer.getName()) ) && chat.getChatParticipants().size() == 1;
-        }
-    }
-
-    public void displayMessage(StoredMessage message) {
-        if (currentlyOpenChat != null) {
-            if (messageBelongsToChat(message, currentlyOpenChat)) {
-                // Display message
-                HBox hBox = new HBox();
-                hBox.setPadding(new Insets(1, 4, 1, 10));
-
-                // Set TextFlows
-                Text messageText = new Text(message.getMessageContent());
-                messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
-                Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
-
-                TextFlow textFlow = new TextFlow();
-                textFlow.setPadding(new Insets(5, 10, 5, 10));
-
-                // If sent or received
-                if (message.getSender().equals("SYSTEM")) {
-                    hBox.setAlignment(Pos.CENTER);
-                    messageText.setStyle("-fx-text-fill: rgb(134,134,134);");
-                    messageTime.setStyle("-fx-font: 11 Berlin-Sans-FB;");
-                } else {
-                    messageTime.setStyle("-fx-font: 10 Berlin-Sans-FB;");
-                    if (message.getSender().equals(peer.getName())) {
-                        hBox.setAlignment(Pos.CENTER_RIGHT);
-                        messageText.setFill(Color.WHITE);
-                        messageTime.setFill(Color.WHITE);
-
-                        // If message failed sending
-                        if (message.isFailed()) {
-                            textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(255, 59, 47); -fx-cursor: hand");
-                            textFlow.setOnMouseClicked(mouseEvent -> displayResendAlert(message));
-                        } else {
-                            textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(15, 125, 242); ");
-                        }
-                    } else {
-                        hBox.setAlignment(Pos.CENTER_LEFT);
-                        textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
-                    }
-                }
-
-                if (!message.getSender().equals("SYSTEM") ) {
-                    Text deliveredText = new Text();
-                    if (message.isDelivered()) {
-                        deliveredText.setText("delivered");
-                    } else {
-                        deliveredText.setText("not delivered");
-                    }
-
-                    if (!message.getSender().equals(peer.getName()) && currentlyOpenChat.getChatParticipants().size() > 1) {
-                        Text usernameText = new Text(message.getSender() + "\n");
-                        usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
-                        textFlow.getChildren().addAll(usernameText, messageText, messageTime, deliveredText);
-                    } else {
-                        textFlow.getChildren().addAll(messageText, messageTime, deliveredText);
-                    }
-
-                } else {
-                    textFlow.getChildren().addAll(messageText, messageTime);
-                }
-
-                hBox.getChildren().add(textFlow);
-
-
-                Platform.runLater(
-                        () -> vbox_messages.getChildren().add(hBox)
-                );
-
-            }
-
-            Platform.runLater(() -> {
-                tf_chat_message.clear();
-                lv_new_convo_results.setCellFactory(lv -> setCells());
-                lv_recent_contacts.setCellFactory(lv -> setCells());
-            });
-
-        }
-    }
-
-    private void displayResendAlert(StoredMessage message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Send Failed");
-        alert.setHeaderText("This message failed to send");
-        alert.setContentText("Choose an option:");
-
-        ButtonType buttonTypeDelete = new ButtonType("Delete");
-        ButtonType buttonTypeResend = new ButtonType("Resend");
-
-        alert.getButtonTypes().setAll(buttonTypeDelete, buttonTypeResend);
-
-        alert.showAndWait().ifPresent(response -> {
-            if (response == buttonTypeDelete) {
-                peer.getActiveChat(message.getChatUUID()).getMessageHistory().remove(message);
-                openChat(message.getChatUUID());
-            } else if (response == buttonTypeResend) {
-                sendMessage(message.getMessageContent());
-                peer.getActiveChat(message.getChatUUID()).getMessageHistory().remove(message);
-                openChat(message.getChatUUID());
-            }
-        });
     }
 
     private ListCell<Chat> setCells() {
@@ -387,7 +323,7 @@ public class HomeController implements Initializable {
                     chatName.setStyle("-fx-font-weight: bold;");
                     textFlow.getChildren().add(chatName);
 
-                    ArrayList<StoredMessage> chatHistory = item.getMessageHistory();
+                    ArrayList<Message> chatHistory = item.getMessageHistory();
                     if (chatHistory.size() > 0) {
                         Text lastMessage = new Text(chatHistory.get(chatHistory.size() - 1).getMessageContent());
                         lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
@@ -434,5 +370,4 @@ public class HomeController implements Initializable {
             tf_searchbar.clear();
         }
     }
-
 }
