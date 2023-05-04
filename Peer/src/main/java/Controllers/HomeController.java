@@ -138,6 +138,7 @@ public class HomeController implements Initializable {
 
     private void sendMessage(String messageContent, Chat openChat) {
         Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, messageContent);
+        messageToSend.setOriginalSender(peer.getName());
         messageToSend.setTtl(5);
 
         // Set chatUUID to null if it is a direct message
@@ -166,15 +167,17 @@ public class HomeController implements Initializable {
 
             Platform.runLater(() -> {
                 vbox_messages.getChildren().clear();
+                Message previousMessage = null;
                 for (Message message : chat.getMessageHistory()) {
-                    displayMessage(message);
+                    displayMessage(message, (previousMessage != null && previousMessage.getOriginalSender().equals(message.getOriginalSender())));
+                    previousMessage = message;
                 }
             });
 
         });
     }
 
-    private void displayMessage(Message message) {
+    private void displayMessage(Message message, boolean sameSender) {
         // Display message
         HBox hBox = new HBox();
         hBox.setPadding(new Insets(1, 4, 1, 10));
@@ -225,9 +228,12 @@ public class HomeController implements Initializable {
             else {
                 // If chat is group chat, show username of sender
                 if (currentlyOpenChat.getChatParticipants().size() > 1) {
-                    Text usernameText = new Text(message.getOriginalSender() + "\n");
-                    usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
-                    textFlow.getChildren().add(usernameText);
+                    if (!sameSender) {
+                        Text usernameText = new Text(message.getOriginalSender() + "\n");
+                        usernameText.setStyle("-fx-font-size: 13; -fx-fill: rgb(195,62,34);");
+                        hBox.setPadding(new Insets(10, 4, 1, 10));
+                        textFlow.getChildren().add(usernameText);
+                    }
                 }
                 hBox.setAlignment(Pos.CENTER_LEFT);
                 textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");

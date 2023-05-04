@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Random;
 
 public class ConnectionHandler extends Thread {
     private String recipientName;
@@ -73,6 +74,20 @@ public class ConnectionHandler extends Thread {
     }
 
     public void sendMessage(Message message) {
+
+        // Simulate network delays
+//        Random rand = new Random();
+//        int chance = rand.nextInt(10);
+//
+//        if (chance < 3) {
+//            try {
+//                Thread.sleep(1000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
+
+
         try {
             System.out.println(parentNode.getName() + " SENDING MESSAGE : '" + message + "' - TO " + this.recipientAddress);
             PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);

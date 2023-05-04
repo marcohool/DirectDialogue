@@ -24,7 +24,7 @@ public class Message {
 
 
     // Create message object from set data
-    public Message(String sourceUsername, InetAddress sourceSocketAddress, int sourcePort, UUID messageUUID, UUID chatUUID, int ttl, MessageDescriptor messageDescriptor, String originalSender, String messageContent) {
+    public Message(String sourceUsername, InetAddress sourceSocketAddress, int sourcePort, UUID messageUUID, UUID chatUUID, int ttl, MessageDescriptor messageDescriptor, String messageContent) {
         this.sourceUsername = sourceUsername;
         this.sourceSocketAddress = sourceSocketAddress;
         this.sourcePort = sourcePort;

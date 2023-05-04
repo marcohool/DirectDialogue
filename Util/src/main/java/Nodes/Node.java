@@ -127,7 +127,7 @@ public abstract class Node implements INode {
     }
 
     public Message signMessage(MessageDescriptor messageDescriptor, String messageContent) {
-        return new Message(this.getName(), this.address.getAddress(), this.address.getPort(), null, null, 3, messageDescriptor, this.getName(), messageContent);
+        return new Message(this.getName(), this.address.getAddress(), this.address.getPort(), null, null, 3, messageDescriptor, messageContent);
     }
 
     public String getName() {

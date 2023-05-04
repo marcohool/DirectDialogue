@@ -386,6 +386,7 @@ public class Peer extends Nodes.Node {
         Message chatCreationMessage = signMessage(MessageDescriptor.CREATE_GROUP, this.getName() + ", " + participants.toString().replace("[", "").replace("]", ""));
         chatCreationMessage.setSourceUsername("SYSTEM");
         chatCreationMessage.setChatUUID(newChat.getChatUUID());
+        chatCreationMessage.setOriginalSender(this.getName());
 
         addChatMessage(newChat, chatCreationMessage);
         broadcastMessage(chatCreationMessage, participants);
