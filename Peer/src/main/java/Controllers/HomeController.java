@@ -3,6 +3,7 @@ package Controllers;
 import Connections.ConnectionHandler;
 import Messages.Message;
 import Messages.MessageDescriptor;
+import Messages.VectorClock;
 import com.example.peer.Chat;
 import com.example.peer.Peer;
 import com.example.peer.PeerUI;
@@ -137,7 +138,7 @@ public class HomeController implements Initializable {
     }
 
     private void sendMessage(String messageContent, Chat openChat) {
-        Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, messageContent);
+        Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, new VectorClock(openChat.getChatParticipants()) + "|" + messageContent);
         messageToSend.setOriginalSender(peer.getName());
         messageToSend.setTtl(5);
 
@@ -152,7 +153,7 @@ public class HomeController implements Initializable {
         peer.addChatMessage(openChat, messageToSend);
 
         // Broadcast message
-        peer.broadcastMessage(messageToSend, openChat.getChatParticipants());
+        peer.deliverMessage(messageToSend, openChat.getChatParticipants());
 
         // Add message to chat message history
         updateRecentChats(openChat);
@@ -183,7 +184,8 @@ public class HomeController implements Initializable {
         hBox.setPadding(new Insets(1, 4, 1, 10));
 
         // Set TextFlows
-        Text messageText = new Text(message.getMessageContent());
+        System.out.println("conent " + message.getMessageContent());
+        Text messageText = new Text(message.getMessageContent().split("\\|", 2)[1]);
         messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
         Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
 
@@ -219,7 +221,7 @@ public class HomeController implements Initializable {
             if (message.getSourceUsername().equals("SYSTEM")) {
                 if (message.getMessageDescriptor().equals(MessageDescriptor.CREATE_GROUP)) {
                     // Set chat creation message
-                    messageText.setText(message.getMessageContent().split(",")[0] + " has created the chat");
+                    messageText.setText(message.getMessageContent().split("\\|", 2)[1].split(",")[0] + " has created the chat");
                 }
                 hBox.setAlignment(Pos.CENTER);
                 messageText.setStyle("-fx-text-fill: rgb(134,134,134); -fx-font: 11 Berlin-Sans-FB;");
@@ -239,8 +241,6 @@ public class HomeController implements Initializable {
                 textFlow.setStyle("-fx-background-radius: 50 50 50 50; -fx-background-color: rgb(232, 232, 235);");
             }
         }
-
-        System.out.println(message.getMessageContent() + " : " + message.getDelivered());
 
         // Set components
         textFlow.getChildren().addAll(messageText, messageTime);
@@ -331,7 +331,7 @@ public class HomeController implements Initializable {
 
                     ArrayList<Message> chatHistory = item.getMessageHistory();
                     if (chatHistory.size() > 0) {
-                        Text lastMessage = new Text(chatHistory.get(chatHistory.size() - 1).getMessageContent());
+                        Text lastMessage = new Text(chatHistory.get(chatHistory.size() - 1).getMessageContent().split("\\|", 2)[1]);
                         lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
                         textFlow.getChildren().add(new Text(System.lineSeparator()));
                         textFlow.getChildren().add(lastMessage);

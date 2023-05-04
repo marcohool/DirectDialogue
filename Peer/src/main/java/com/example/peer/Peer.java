@@ -193,26 +193,45 @@ public class Peer extends Nodes.Node {
                         for (String ip : message.getMessageContent().split(" ")) {
                             String[] ipSplit = ip.split(":");
 
-                            // If QUERYHIT is simply a returned IP (NEIGHBOURHOOD query) -> ping it
+                            InetSocketAddress returnedIP = null;
                             if (ipSplit.length == 2) {
-                                sendMessageToAddress(signMessage(MessageDescriptor.PING, null), new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1])));
-                                break;
+                                returnedIP = new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1]));
+                            }
+                            else {
+                                returnedIP = new InetSocketAddress(ipSplit[1].replace("/", ""), Integer.parseInt(ipSplit[2]));
                             }
 
-                            // Else is a USER QUERYHIT
-                            String returnedUsername = ipSplit[0];
-                            InetSocketAddress returnedIP = new InetSocketAddress(ipSplit[1].replace("/", ""), Integer.parseInt(ipSplit[2]));
 
-                            // Check message queue for any messages this peer wants to send to the returned peer IP
-                            for (String user : this.messageQueue.keySet()) {
-                                // If this peer has a message for the returned QUERYHIT - send PING
-                                if (user.equals(returnedUsername)) {
-                                    sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                            // Only handle if the returned address is not already connected to this peer
+                            boolean connectionExists = false;
+                            for (ConnectionHandler connection : this.activeConnections) {
+                                if (connection.getRecipientAddress().equals(returnedIP)) {
+                                    connectionExists = true;
+                                    break;
                                 }
                             }
 
-                            // Check query queue for peers requesting this user
-                            sendQueryQueue(returnedUsername, returnedIP);
+                            if (!connectionExists) {
+                                // If QUERYHIT is simply a returned IP (NEIGHBOURHOOD query) -> ping it
+                                if (ipSplit.length == 2) {
+                                    sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                    break;
+                                }
+
+                                // Else is a USER QUERYHIT
+                                String returnedUsername = ipSplit[0];
+
+                                // Check message queue for any messages this peer wants to send to the returned peer IP
+                                for (String user : this.messageQueue.keySet()) {
+                                    // If this peer has a message for the returned QUERYHIT - send PING
+                                    if (user.equals(returnedUsername)) {
+                                        sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                    }
+                                }
+
+                                // Check query queue for peers requesting this user
+                                sendQueryQueue(returnedUsername, returnedIP);
+                            }
 
                         }
                         break;
@@ -229,6 +248,9 @@ public class Peer extends Nodes.Node {
                             }
                         }
 
+                        // Split vector clock from message content
+                        VectorClock vectorClock = new VectorClock(message.getMessageContent().split("\\|", 2)[0]);
+
                         // If chatUUID is null - message is a personal message
                         boolean chatExists = false;
                         if (message.getChatUUID() == null) {
@@ -238,6 +260,7 @@ public class Peer extends Nodes.Node {
                                 if (activeChat.getChatUUID() == null && activeChat.getChatParticipants().equals(new HashSet<>(Collections.singleton(message.getSourceUsername())))) {
                                     chatExists = true;
                                     activeChat.addMessageHistory(message);
+                                    deliverMessage(message, activeChat.getChatParticipants());
                                     this.homeController.updateRecentChats(activeChat);
                                     break;
                                 }
@@ -247,6 +270,7 @@ public class Peer extends Nodes.Node {
                             if (!chatExists) {
                                 Chat newChat = new Chat(null,  new HashSet<>(Collections.singleton(message.getSourceUsername())));
                                 newChat.addMessageHistory(message);
+                                deliverMessage(message, newChat.getChatParticipants());
                                 this.activeChats.add(newChat);
                                 this.homeController.updateRecentChats(newChat);
                             }
@@ -260,6 +284,7 @@ public class Peer extends Nodes.Node {
                                 if (activeChats.getChatUUID() != null && activeChats.getChatUUID().equals(message.getChatUUID())) {
                                     chatExists = true;
                                     activeChats.addMessageHistory(message);
+                                    deliverMessage(message, activeChats.getChatParticipants());
                                     this.homeController.updateRecentChats(activeChats);
                                     break;
                                 }
@@ -271,8 +296,8 @@ public class Peer extends Nodes.Node {
                             }
                         }
 
-                        // Deliver message
-                        deliverMessage(message);
+//                        // Deliver message
+//                        deliverMessage(message);
 
                         break;
 
@@ -288,7 +313,7 @@ public class Peer extends Nodes.Node {
                             }
                         }
 
-                        ArrayList<String> participants = new ArrayList<>(Arrays.asList(message.getMessageContent().split(", ")));
+                        ArrayList<String> participants = new ArrayList<>(Arrays.asList(message.getMessageContent().split("\\|", 2)[1].split(", ")));
 
                         // Remove this peer from participants
                         participants.remove(this.getName());
@@ -300,7 +325,7 @@ public class Peer extends Nodes.Node {
                         this.activeChats.add(newGroupChat);
                         this.homeController.updateRecentChats(newGroupChat);
 
-                        deliverMessage(message);
+                        deliverMessage(message, newGroupChat.getChatParticipants());
                 }
             }
         }
@@ -330,8 +355,8 @@ public class Peer extends Nodes.Node {
         messageToBroadcast.setMessageUUID(message.getMessageUUID());
         messageToBroadcast.setOriginalSender(message.getSourceUsername());
 
-        // Deliver message
-        this.deliveredMessages.add(message);
+//        // Deliver message
+//        this.deliveredMessages.add(message);
 
         // If message is direct message
         if (message.getChatUUID() == null) {
@@ -373,23 +398,23 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public void deliverMessage(Message message) {
+    public void deliverMessage(Message message, Set<String> participants) {
         // if m ∈ delivered then
         if (!this.deliveredMessages.contains(message)) {
             this.deliveredMessages.add(message); // delivered := delivered U {m};
-            broadcastMessage(message, null); //  # "Echo" m via BEB to ensure all correct processes get it
+            broadcastMessage(message, participants); //  # "Echo" m via BEB to ensure all correct processes get it
         }
     }
 
     public void createGroup(Set<String> participants) {
         Chat newChat = new Chat(UUID.randomUUID(), participants);
-        Message chatCreationMessage = signMessage(MessageDescriptor.CREATE_GROUP, this.getName() + ", " + participants.toString().replace("[", "").replace("]", ""));
+        Message chatCreationMessage = signMessage(MessageDescriptor.CREATE_GROUP, new VectorClock(participants) + "|" + this.getName() + ", " + participants.toString().replace("[", "").replace("]", ""));
         chatCreationMessage.setSourceUsername("SYSTEM");
         chatCreationMessage.setChatUUID(newChat.getChatUUID());
         chatCreationMessage.setOriginalSender(this.getName());
 
         addChatMessage(newChat, chatCreationMessage);
-        broadcastMessage(chatCreationMessage, participants);
+        deliverMessage(chatCreationMessage, participants);
         homeController.updateRecentChats(newChat);
 
     }
