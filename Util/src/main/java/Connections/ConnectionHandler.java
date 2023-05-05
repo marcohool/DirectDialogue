@@ -76,16 +76,16 @@ public class ConnectionHandler extends Thread {
     public void sendMessage(Message message) {
 
         // Simulate network delays
-//        Random rand = new Random();
-//        int chance = rand.nextInt(10);
-//
-//        if (chance < 3) {
-//            try {
-//                Thread.sleep(1000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
-//        }
+        Random rand = new Random();
+        int chance = rand.nextInt(10);
+
+        if (chance < 3) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
 
         try {

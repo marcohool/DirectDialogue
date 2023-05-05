@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -26,7 +27,7 @@ public class Peer extends Nodes.Node {
     private final LinkedHashSet<Message> deliveredMessages = new LinkedHashSet<>();
 
     // Store QUERY requests that have been echoed and waiting for QUERYHIT - <User sending query, queried username>
-    protected final HashMap<String, HashSet<String>> receivedQueryRequests = new HashMap<>();
+    protected final ConcurrentHashMap<String, HashSet<String>> receivedQueryRequests = new ConcurrentHashMap <>();
 
     // Store messages meant for this peer for group chats that have not yet been initialized
     private final ArrayList<Message> groupMessageQueue = new ArrayList<>();
@@ -193,7 +194,7 @@ public class Peer extends Nodes.Node {
                         for (String ip : message.getMessageContent().split(" ")) {
                             String[] ipSplit = ip.split(":");
 
-                            InetSocketAddress returnedIP = null;
+                            InetSocketAddress returnedIP;
                             if (ipSplit.length == 2) {
                                 returnedIP = new InetSocketAddress(ipSplit[0], Integer.parseInt(ipSplit[1]));
                             }
@@ -259,8 +260,7 @@ public class Peer extends Nodes.Node {
                             for (Chat activeChat : this.getActiveChats()) {
                                 if (activeChat.getChatUUID() == null && activeChat.getChatParticipants().equals(new HashSet<>(Collections.singleton(message.getSourceUsername())))) {
                                     chatExists = true;
-                                    activeChat.addMessageHistory(message);
-                                    deliverMessage(message, activeChat.getChatParticipants());
+                                    deliverMessage(message, activeChat);
                                     this.homeController.updateRecentChats(activeChat);
                                     break;
                                 }
@@ -268,9 +268,8 @@ public class Peer extends Nodes.Node {
 
                             // Add new chat if chat doesn't exist
                             if (!chatExists) {
-                                Chat newChat = new Chat(null,  new HashSet<>(Collections.singleton(message.getSourceUsername())));
-                                newChat.addMessageHistory(message);
-                                deliverMessage(message, newChat.getChatParticipants());
+                                Chat newChat = new Chat(null,  new HashSet<>(Collections.singleton(message.getSourceUsername())), this.getName());
+                                deliverMessage(message, newChat);
                                 this.activeChats.add(newChat);
                                 this.homeController.updateRecentChats(newChat);
                             }
@@ -283,8 +282,7 @@ public class Peer extends Nodes.Node {
                             for (Chat activeChats : this.getActiveChats()) {
                                 if (activeChats.getChatUUID() != null && activeChats.getChatUUID().equals(message.getChatUUID())) {
                                     chatExists = true;
-                                    activeChats.addMessageHistory(message);
-                                    deliverMessage(message, activeChats.getChatParticipants());
+                                    deliverMessage(message, activeChats);
                                     this.homeController.updateRecentChats(activeChats);
                                     break;
                                 }
@@ -318,14 +316,14 @@ public class Peer extends Nodes.Node {
                         // Remove this peer from participants
                         participants.remove(this.getName());
 
-                        Chat newGroupChat = new Chat(message.getChatUUID(), new HashSet<>(participants));
+                        Chat newGroupChat = new Chat(message.getChatUUID(), new HashSet<>(participants), this.getName());
                         message.setSourceUsername("SYSTEM");
-                        newGroupChat.addMessageHistory(message);
+
+                        deliverMessage(message, newGroupChat);
 
                         this.activeChats.add(newGroupChat);
                         this.homeController.updateRecentChats(newGroupChat);
 
-                        deliverMessage(message, newGroupChat.getChatParticipants());
                 }
             }
         }
@@ -354,9 +352,6 @@ public class Peer extends Nodes.Node {
         messageToBroadcast.setChatUUID(message.getChatUUID());
         messageToBroadcast.setMessageUUID(message.getMessageUUID());
         messageToBroadcast.setOriginalSender(message.getSourceUsername());
-
-//        // Deliver message
-//        this.deliveredMessages.add(message);
 
         // If message is direct message
         if (message.getChatUUID() == null) {
@@ -398,23 +393,29 @@ public class Peer extends Nodes.Node {
 
     }
 
-    public void deliverMessage(Message message, Set<String> participants) {
+    public void deliverMessage(Message message, Chat chat) {
         // if m ∈ delivered then
         if (!this.deliveredMessages.contains(message)) {
             this.deliveredMessages.add(message); // delivered := delivered U {m};
-            broadcastMessage(message, participants); //  # "Echo" m via BEB to ensure all correct processes get it
+
+            // Add chat if it is new
+            if (!this.activeChats.contains(chat)) {
+                this.activeChats.add(chat);
+            }
+
+            chat.addPending(message);
+            broadcastMessage(message, chat.getChatParticipants()); //  # "Echo" m via BEB to ensure all correct processes get it
         }
     }
 
     public void createGroup(Set<String> participants) {
-        Chat newChat = new Chat(UUID.randomUUID(), participants);
-        Message chatCreationMessage = signMessage(MessageDescriptor.CREATE_GROUP, new VectorClock(participants) + "|" + this.getName() + ", " + participants.toString().replace("[", "").replace("]", ""));
+        Chat newChat = new Chat(UUID.randomUUID(), participants, this.getName());
+        Message chatCreationMessage = signMessage(MessageDescriptor.CREATE_GROUP, new VectorClock(participants, this.getName()) + "|" + this.getName() + ", " + participants.toString().replace("[", "").replace("]", ""));
         chatCreationMessage.setSourceUsername("SYSTEM");
         chatCreationMessage.setChatUUID(newChat.getChatUUID());
         chatCreationMessage.setOriginalSender(this.getName());
 
-        addChatMessage(newChat, chatCreationMessage);
-        deliverMessage(chatCreationMessage, participants);
+        deliverMessage(chatCreationMessage, newChat);
         homeController.updateRecentChats(newChat);
 
     }
@@ -435,13 +436,6 @@ public class Peer extends Nodes.Node {
                     // Remove from queue
                     iterator.remove();
                 }
-//                for (Message message : queuedMessages.getValue()) {
-//                    newConnectionHandler.sendMessage(message);
-//
-//                    // Remove from queue
-//                    queuedMessages.getValue().remove(message);
-//
-//                }
             }
         }
     }
@@ -456,24 +450,12 @@ public class Peer extends Nodes.Node {
                 sendMessageToUsername(signMessage(MessageDescriptor.QUERYHIT, username + ":" + recipientAddress), queryRequest.getKey());
                 queryRequest.getValue().remove(username);
 
-                if (queryRequest.getValue().size() == 0) {
+                if (queryRequest.getValue().isEmpty()) {
                     it.remove(); // remove the current entry using the iterator
                 }
             }
         }
     }
-
-    // Add message/chat to active chats
-    public void addChatMessage(Chat chat, Message message) {
-
-        chat.addMessageHistory(message);
-
-        if (!this.activeChats.contains(chat)) {
-            this.activeChats.add(chat);
-        }
-
-    }
-
 
     public void displayAlert(String message) {
         Platform.runLater(

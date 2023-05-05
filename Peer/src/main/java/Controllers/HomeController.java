@@ -29,6 +29,8 @@ import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 public class HomeController implements Initializable {
@@ -138,7 +140,7 @@ public class HomeController implements Initializable {
     }
 
     private void sendMessage(String messageContent, Chat openChat) {
-        Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, new VectorClock(openChat.getChatParticipants()) + "|" + messageContent);
+        Message messageToSend = peer.signMessage(MessageDescriptor.MESSAGE, openChat.getVectorClockAndIncrement(peer.getName()) + "|" + messageContent);
         messageToSend.setOriginalSender(peer.getName());
         messageToSend.setTtl(5);
 
@@ -150,10 +152,8 @@ public class HomeController implements Initializable {
             messageToSend.setChatUUID(openChat.getChatUUID());
         }
 
-        peer.addChatMessage(openChat, messageToSend);
-
-        // Broadcast message
-        peer.deliverMessage(messageToSend, openChat.getChatParticipants());
+        // Deliver message
+        peer.deliverMessage(messageToSend, openChat);
 
         // Add message to chat message history
         updateRecentChats(openChat);
@@ -169,7 +169,7 @@ public class HomeController implements Initializable {
             Platform.runLater(() -> {
                 vbox_messages.getChildren().clear();
                 Message previousMessage = null;
-                for (Message message : chat.getMessageHistory()) {
+                for (Message message : chat.getCrbDeliveredMessages()) {
                     displayMessage(message, (previousMessage != null && previousMessage.getOriginalSender().equals(message.getOriginalSender())));
                     previousMessage = message;
                 }
@@ -184,8 +184,8 @@ public class HomeController implements Initializable {
         hBox.setPadding(new Insets(1, 4, 1, 10));
 
         // Set TextFlows
-        System.out.println("conent " + message.getMessageContent());
-        Text messageText = new Text(message.getMessageContent().split("\\|", 2)[1]);
+        //Text messageText = new Text(message.getMessageContent().split("\\|", 2)[1]);
+        Text messageText = new Text(message.getMessageContent());
         messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
         Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
 
@@ -307,7 +307,7 @@ public class HomeController implements Initializable {
             }
 
             if (!chatExists) {
-                chats[i] = new Chat(null, new HashSet<>(Collections.singleton(users[i])));
+                chats[i] = new Chat(null, new HashSet<>(Collections.singleton(users[i])), peer.getName());
             }
 
         }
@@ -329,9 +329,9 @@ public class HomeController implements Initializable {
                     chatName.setStyle("-fx-font-weight: bold;");
                     textFlow.getChildren().add(chatName);
 
-                    ArrayList<Message> chatHistory = item.getMessageHistory();
+                    ConcurrentLinkedDeque<Message> chatHistory = item.getCrbDeliveredMessages();
                     if (chatHistory.size() > 0) {
-                        Text lastMessage = new Text(chatHistory.get(chatHistory.size() - 1).getMessageContent().split("\\|", 2)[1]);
+                        Text lastMessage = new Text(chatHistory.getLast().getMessageContent().split("\\|", 2)[1]);
                         lastMessage.setStyle("-fx-font-weight: lighter; -fx-font-size: 12;");
                         textFlow.getChildren().add(new Text(System.lineSeparator()));
                         textFlow.getChildren().add(lastMessage);
