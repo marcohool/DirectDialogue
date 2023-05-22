@@ -2,18 +2,20 @@ package com.example.peer;
 
 import Messages.MessageDescriptor;
 
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
 public class InitialPeers {
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
 
         ArrayList<Peer> initialPeers = setInitialPeers(new InetSocketAddress[]{
-                new InetSocketAddress("127.0.0.1", 1),
-                new InetSocketAddress("127.0.0.1", 2),
-                new InetSocketAddress("127.0.0.1", 3),
+                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 1),
+                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 2),
+                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 3),
 //                new InetSocketAddress("127.0.0.1", 4),
 //                new InetSocketAddress("127.0.0.1", 5),
         });
@@ -28,7 +30,7 @@ public class InitialPeers {
         System.out.println("\n");
     }
 
-    public static ArrayList<Peer> setInitialPeers(InetSocketAddress[] addresses) {
+    public static ArrayList<Peer> setInitialPeers(InetSocketAddress[] addresses) throws IOException {
         ArrayList<Peer> peers = new ArrayList<>();
 
         // Declare peers

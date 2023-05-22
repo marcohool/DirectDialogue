@@ -8,8 +8,14 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class LoginController implements Initializable {
@@ -37,8 +43,27 @@ public class LoginController implements Initializable {
 
         bt_login.setOnAction(actionEvent -> {
             peer.setLastEvent(actionEvent);
-            peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.LOGIN, tf_username.getText() + " " + pf_password.getText()), peer.getServerAddress());
+            try {
+                peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.LOGIN, tf_username.getText() + " " + pf_password.getText()), peer.getServerAddress());
+            } catch (IOException e) {
+                e.printStackTrace();
+
+                TextInputDialog dialog = new TextInputDialog("");
+
+                dialog.setTitle("Server Error");
+                dialog.setHeaderText("There was an error connecting to the server, this may be due to an configuration error. \nPlease enter below the IP address the server is running on");
+                dialog.setContentText("IP Address (e.g. 192.168.56.1)");
+
+                Optional<String> result = dialog.showAndWait();
+
+                result.ifPresent(name -> {
+                    System.out.println(result.get());
+                    peer.setServerAddress(result.get());
+                });
+            }
         });
+
+
 
     }
 }

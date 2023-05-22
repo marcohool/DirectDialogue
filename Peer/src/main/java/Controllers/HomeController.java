@@ -107,7 +107,11 @@ public class HomeController implements Initializable {
         tf_searchbar.setOnAction(actionEvent -> {
             if (!tf_searchbar.getText().equals("")) {
                 peer.setLastEvent(actionEvent);
-                peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.SEARCH, tf_searchbar.getText().toLowerCase()), peer.getServerAddress());
+                try {
+                    peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.SEARCH, tf_searchbar.getText().toLowerCase()), peer.getServerAddress());
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
 
@@ -184,8 +188,8 @@ public class HomeController implements Initializable {
         hBox.setPadding(new Insets(1, 4, 1, 10));
 
         // Set TextFlows
-        //Text messageText = new Text(message.getMessageContent().split("\\|", 2)[1]);
-        Text messageText = new Text(message.getMessageContent());
+        Text messageText = new Text(message.getMessageContent().split("\\|", 2)[1]);
+        //Text messageText = new Text(message.getMessageContent());
         messageText.setStyle("-fx-font: 14 Berlin-Sans-FB");
         Text messageTime = new Text("   " + message.getDateTime().getHour() + ":" + (message.getDateTime().getMinute() < 10 ? "0" : "") + message.getDateTime().getMinute());
 

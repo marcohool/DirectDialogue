@@ -13,14 +13,16 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Peer extends Nodes.Node {
-    private final InetSocketAddress serverAddress = new InetSocketAddress("192.168.56.1", 1926);
+    private InetSocketAddress serverAddress = new InetSocketAddress("192.168.56.1", 1926);
 
     private final ArrayList<Chat> activeChats = new ArrayList<>();
 
@@ -39,12 +41,12 @@ public class Peer extends Nodes.Node {
     private final Object homeControllerLock = new Object();
 
     // Hard-coded initial peers
-    private static final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
-            new InetSocketAddress("127.0.0.1", 1),
-            new InetSocketAddress("127.0.0.1", 2),
-            new InetSocketAddress("127.0.0.1", 3),
-//            new InetSocketAddress("127.0.0.1", 4),
-//            new InetSocketAddress("127.0.0.1", 5),
+    private final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
+            new InetSocketAddress(serverAddress.getAddress(), 1),
+            new InetSocketAddress(serverAddress.getAddress(), 2),
+            new InetSocketAddress(serverAddress.getAddress(), 3),
+//            new InetSocketAddress(serverAddress.getAddress(), 4),
+//            new InetSocketAddress(serverAddress.getAddress(), 5),
     };
 
     // Constructors
@@ -79,7 +81,12 @@ public class Peer extends Nodes.Node {
                         // Ping initial peer
                         Random random = new Random();
                         InetSocketAddress peerToPing = initialPeers[random.nextInt(initialPeers.length)];
-                        this.sendMessageToAddress(signMessage(MessageDescriptor.PING, null), peerToPing);
+                        try {
+                            this.sendMessageToAddress(signMessage(MessageDescriptor.PING, null), peerToPing);
+                        } catch (IOException e) {
+                            System.out.println("Connection to initial peer failed");
+                            e.printStackTrace();
+                        }
 
                         // Change scene to home scene
                         changeScene(this.lastEvent, "home.fxml");
@@ -215,7 +222,11 @@ public class Peer extends Nodes.Node {
                             if (!connectionExists) {
                                 // If QUERYHIT is simply a returned IP (NEIGHBOURHOOD query) -> ping it
                                 if (ipSplit.length == 2) {
-                                    sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                    try {
+                                        sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
                                     break;
                                 }
 
@@ -226,7 +237,11 @@ public class Peer extends Nodes.Node {
                                 for (String user : this.messageQueue.keySet()) {
                                     // If this peer has a message for the returned QUERYHIT - send PING
                                     if (user.equals(returnedUsername)) {
-                                        sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                        try {
+                                            sendMessageToAddress(signMessage(MessageDescriptor.PING, null), returnedIP);
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
+                                        }
                                     }
                                 }
 
@@ -563,5 +578,9 @@ public class Peer extends Nodes.Node {
 
     public void setLastEvent(ActionEvent lastEvent) {
         this.lastEvent = lastEvent;
+    }
+
+    public void setServerAddress(String serverAddress) {
+        this.serverAddress = new InetSocketAddress(serverAddress, 1926);
     }
 }

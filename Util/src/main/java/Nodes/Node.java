@@ -71,8 +71,8 @@ public abstract class Node implements INode {
 
     }
 
-    public void sendMessageToAddress(Message message, InetSocketAddress destinationAddress) {
-        try {
+    public void sendMessageToAddress(Message message, InetSocketAddress destinationAddress) throws IOException {
+
             // Check if connection with this address already exists
             ConnectionHandler connection = searchForEstablishedConnectionByAddress(destinationAddress);
 
@@ -84,10 +84,7 @@ public abstract class Node implements INode {
             // Send message
             connection.sendMessage(message);
 
-        } catch (IOException e) {
-            System.out.println("-- Connection refused to " + destinationAddress + " --");
-            e.printStackTrace();
-        }
+
     }
 
     private synchronized ConnectionHandler searchForEstablishedConnectionByAddress(InetSocketAddress address) {
