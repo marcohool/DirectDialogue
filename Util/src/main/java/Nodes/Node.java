@@ -8,10 +8,8 @@ import Messages.Query;
 import Messages.QueryDescriptor;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.ConcurrentModificationException;
-import java.util.Queue;
+import java.net.*;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -23,16 +21,24 @@ public abstract class Node implements INode {
     // Queues
     protected final ConcurrentHashMap<String, ConcurrentLinkedQueue<Message>> messageQueue = new ConcurrentHashMap<>();
 
-    // Starting node with a specified address
-    public Node(String name, InetSocketAddress address) {
+    // Starting node on a specified address
+    public Node(String name, InetSocketAddress address)  {
         this.name = name;
         this.address = address;
+        startListener();
+    }
+
+    // Starting node on a specified port
+    public Node(String name, int port)  {
+        this.name = name;
+        this.address = new InetSocketAddress(getAddressInput(), port);
         startListener();
     }
 
     // Starting a node with a randomly generated address
     public Node(String name) {
         this.name = name;
+        this.address = new InetSocketAddress(getAddressInput(), 0);
         startListener();
 
     }
@@ -113,6 +119,41 @@ public abstract class Node implements INode {
             searchForEstablishedConnectionByUsername(username);
         }
         return null;
+    }
+
+    public static String getAddressInput()  {
+        Scanner scanner = new Scanner(System.in);
+        String inputAddress = "";
+
+        List<String> ipAddressList = new ArrayList<>();
+        Enumeration<NetworkInterface> networkInterfaces = null;
+        try {
+            networkInterfaces = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
+        while (networkInterfaces.hasMoreElements()) {
+            NetworkInterface networkInterface = networkInterfaces.nextElement();
+            Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+            while (inetAddresses.hasMoreElements()) {
+                InetAddress inetAddress = inetAddresses.nextElement();
+                if (!inetAddress.isLoopbackAddress() && inetAddress instanceof Inet4Address) {
+                    ipAddressList.add(inetAddress.getHostAddress());
+                }
+            }
+        }
+
+        // Printing the IP addresses
+        while (!ipAddressList.contains(inputAddress)) {
+            System.out.println("List of network interface addresses: ");
+            for (String ipAddress : ipAddressList) {
+                System.out.println(" - " + ipAddress);
+            }
+            System.out.println("Please enter an IP address of one of your network interfaces to host this server: ");
+            inputAddress = scanner.next();
+        }
+
+        return inputAddress;
     }
 
     protected void addMessageToQueue(String recipient, Message message) {

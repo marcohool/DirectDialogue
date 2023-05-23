@@ -3,25 +3,20 @@ import Messages.Message;
 import Messages.MessageDescriptor;
 import Nodes.Node;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
+import java.io.IOException;
+import java.net.*;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 
 public class Server extends Node {
 
-    public Server(String name, InetSocketAddress address) {
-        super(name, address);
+    public Server(String name, int port) {
+        super(name, port);
     }
 
-    public static void main(String[] args) throws UnknownHostException {
-
-        // Start server on specified IP and port
-        Server server = new Server("server1", new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 1926));
-
+    public static void main(String[] args) {
+        //Start server on specified IP and port
+        Server server = new Server("server1",1926);
     }
 
     public void handleMessage(Message message, ConnectionHandler connectionHandler) {

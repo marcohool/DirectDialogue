@@ -1,23 +1,27 @@
 package com.example.peer;
 
 import Messages.MessageDescriptor;
+import Nodes.Node;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Scanner;
 
 public class InitialPeers {
 
 
     public static void main(String[] args) throws IOException {
 
+        String inputAddress = Node.getAddressInput();
+
         ArrayList<Peer> initialPeers = setInitialPeers(new InetSocketAddress[]{
-                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 1),
-                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 2),
-                new InetSocketAddress(InetAddress.getLocalHost().getHostAddress(), 3),
-//                new InetSocketAddress("127.0.0.1", 4),
-//                new InetSocketAddress("127.0.0.1", 5),
+                new InetSocketAddress(inputAddress, 1),
+                new InetSocketAddress(inputAddress, 2),
+                new InetSocketAddress(inputAddress, 3),
+                new InetSocketAddress(inputAddress, 4),
+                new InetSocketAddress(inputAddress, 5),
         });
 
         Peer.wait(1);

@@ -44,6 +44,7 @@ public class LoginController implements Initializable {
         bt_login.setOnAction(actionEvent -> {
             peer.setLastEvent(actionEvent);
             try {
+                System.out.println(peer.getServerAddress());
                 peer.sendMessageToAddress(peer.signMessage(MessageDescriptor.LOGIN, tf_username.getText() + " " + pf_password.getText()), peer.getServerAddress());
             } catch (IOException e) {
                 e.printStackTrace();

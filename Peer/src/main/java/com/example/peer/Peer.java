@@ -13,16 +13,14 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 public class Peer extends Nodes.Node {
-    private InetSocketAddress serverAddress = new InetSocketAddress("192.168.56.1", 1926);
+    private InetSocketAddress serverAddress;
 
     private final ArrayList<Chat> activeChats = new ArrayList<>();
 
@@ -41,19 +39,15 @@ public class Peer extends Nodes.Node {
     private final Object homeControllerLock = new Object();
 
     // Hard-coded initial peers
-    private final InetSocketAddress[] initialPeers = new InetSocketAddress[]{
-            new InetSocketAddress(serverAddress.getAddress(), 1),
-            new InetSocketAddress(serverAddress.getAddress(), 2),
-            new InetSocketAddress(serverAddress.getAddress(), 3),
-//            new InetSocketAddress(serverAddress.getAddress(), 4),
-//            new InetSocketAddress(serverAddress.getAddress(), 5),
-    };
+    private final InetSocketAddress[] initialPeers = new InetSocketAddress[5];
 
     // Constructors
     public Peer(String name) {
         super(name);
+        setInitialAddresses();
     }
 
+    // Used for constructing initial peers
     public Peer(String username, InetSocketAddress address) {
         super(username, address);
     }
@@ -62,6 +56,20 @@ public class Peer extends Nodes.Node {
     public static void main(String[] args) {
         PeerUI ui = new PeerUI();
         ui.start();
+    }
+
+    private void setInitialAddresses() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("\nPlease enter the IP address of the initial peers: ");
+        String address = scanner.next();
+
+        for (int i = 0; i<initialPeers.length; i++) {
+            initialPeers[i] = new InetSocketAddress(address, i+1);
+        }
+
+        System.out.println("\nPlease enter the IP address of the server: ");
+        address = scanner.next();
+        this.serverAddress = new InetSocketAddress(address, 1926);
     }
 
     @Override
@@ -409,8 +417,7 @@ public class Peer extends Nodes.Node {
     }
 
     public void deliverMessage(Message message, Chat chat) {
-        // if m ∈ delivered then
-        if (!this.deliveredMessages.contains(message)) {
+        if (!this.deliveredMessages.contains(message)) { // if m ∈ delivered then
             this.deliveredMessages.add(message); // delivered := delivered U {m};
 
             // Add chat if it is new
@@ -418,8 +425,8 @@ public class Peer extends Nodes.Node {
                 this.activeChats.add(chat);
             }
 
-            chat.addPending(message);
-            broadcastMessage(message, chat.getChatParticipants()); //  # "Echo" m via BEB to ensure all correct processes get it
+            chat.addPending(message); // trigger <rb, Deliver | s, m>;
+            broadcastMessage(message, chat.getChatParticipants()); // "Echo" m via BEB to ensure all correct processes get it
         }
     }
 

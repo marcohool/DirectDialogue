@@ -101,33 +101,6 @@ public class Chat {
             }
         } while (loopAgain);
 
-
-
-//        boolean shouldDeliver = true;
-//        // Loop through all pending messages and check if this new message is <= than all of them
-//        do {
-//            for (Message pendingMessage : this.pending) {
-//                VectorClock vectorClock = new VectorClock(pendingMessage.getMessageContent().split("\\|", 2)[0]);
-//
-//                for (Map.Entry<String, Integer> entry : vectorClock.getClock().entrySet()) {
-//                    String participant = entry.getKey();
-//                    int messageClockValue = entry.getValue();
-//                    int currentClockValue = messageVectorClock.getClock().getOrDefault(participant, 0);
-//                    if (messageClockValue > currentClockValue) {
-//                        shouldDeliver = false;
-//                        break;
-//                    }
-//                }
-//            }
-//
-//            if (shouldDeliver) {
-//                this.vectorClock.getClock().put(message.getOriginalSender(), this.lsn);
-//                this.lsn += 1;
-//                this.crbDeliveredMessages.add(message);
-//                this.pending.remove(message);
-//            }
-//        } while (shouldDeliver);
-
     }
 
     public void setLsn(int lsn) {
